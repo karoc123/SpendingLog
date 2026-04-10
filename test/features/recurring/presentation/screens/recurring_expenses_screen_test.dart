@@ -63,6 +63,23 @@ void main() {
     expect(find.byType(FloatingActionButton), findsOneWidget);
   });
 
+  testWidgets('Recurring create form shows next transaction preview', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const RecurringExpensesScreen(),
+        overrides: buildOverrides(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nächste Transaktion'), findsOneWidget);
+  });
+
   testWidgets('RecurringExpensesScreen shows empty state when no items', (
     tester,
   ) async {

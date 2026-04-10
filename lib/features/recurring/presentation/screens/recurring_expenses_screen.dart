@@ -11,6 +11,7 @@ import '../../../../core/utils/screen_help.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
+import '../../../statistics/presentation/providers/statistics_providers.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../../expenses/presentation/providers/expense_providers.dart';
 import '../../domain/entities/recurring_expense_entity.dart';
@@ -198,7 +199,6 @@ class _RecurringExpensesScreenState
           : '',
     );
     int? selectedCategoryId = existing?.categoryId ?? prefillCategoryId;
-    int? selectedParentCategoryId;
     RecurringInterval selectedInterval =
         existing?.interval ?? RecurringInterval.monthly;
     DateTime selectedStartDate =
@@ -213,9 +213,6 @@ class _RecurringExpensesScreenState
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            final parents = categories
-                .where((c) => c.parentId == null)
-                .toList();
             return SafeArea(
               child: Padding(
                 padding: EdgeInsets.only(
@@ -273,82 +270,34 @@ class _RecurringExpensesScreenState
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Builder(
-                        builder: (_) {
-                          final selected = categories
-                              .where((c) => c.id == selectedCategoryId)
-                              .firstOrNull;
-                          final activeParentId =
-                              selectedParentCategoryId ?? selected?.parentId;
-                          final subcategories = activeParentId == null
-                              ? <CategoryEntity>[]
-                              : categories
-                                    .where((c) => c.parentId == activeParentId)
-                                    .toList();
-
-                          if (activeParentId != null &&
-                              subcategories.isNotEmpty) {
-                            final activeParent = categories
-                                .where((c) => c.id == activeParentId)
-                                .firstOrNull;
-                            return Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: [
-                                ChoiceChip(
-                                  label: Text(
-                                    '← ${activeParent?.name ?? 'Kategorie'}',
-                                  ),
-                                  selected: false,
-                                  onSelected: (_) => setSheetState(() {
-                                    selectedParentCategoryId = null;
-                                    selectedCategoryId = null;
-                                  }),
-                                ),
-                                ...subcategories.map((cat) {
-                                  return ChoiceChip(
-                                    label: Text(cat.name),
-                                    selected: selectedCategoryId == cat.id,
-                                    selectedColor: Color(
-                                      cat.colorValue,
-                                    ).withValues(alpha: 0.3),
-                                    onSelected: (_) => setSheetState(
-                                      () => selectedCategoryId = cat.id,
-                                    ),
-                                  );
-                                }),
-                              ],
-                            );
-                          }
-
-                          return Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: parents.map((cat) {
-                              return ChoiceChip(
-                                label: Text(cat.name),
-                                selected: selectedCategoryId == cat.id,
-                                selectedColor: Color(
-                                  cat.colorValue,
-                                ).withValues(alpha: 0.3),
-                                onSelected: (_) {
-                                  final hasChildren = categories.any(
-                                    (c) => c.parentId == cat.id,
-                                  );
-                                  setSheetState(() {
-                                    if (hasChildren) {
-                                      selectedParentCategoryId = cat.id;
-                                      selectedCategoryId = null;
-                                    } else {
-                                      selectedParentCategoryId = null;
-                                      selectedCategoryId = cat.id;
-                                    }
-                                  });
-                                },
-                              );
-                            }).toList(),
+                      InkWell(
+                        onTap: () async {
+                          final selection = await _showCategoryPickerModal(
+                            ctx,
+                            categories,
+                            selectedCategoryId: selectedCategoryId,
                           );
+                          if (selection == null) return;
+                          setSheetState(() {
+                            selectedCategoryId = selection.$1;
+                          });
                         },
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: 'Kategorie',
+                            suffixIcon: const Icon(Icons.chevron_right),
+                          ),
+                          child: Text(
+                            _categoryPickerLabel(
+                              categories,
+                              selectedCategoryId,
+                              fallback:
+                                  l10n?.selectCategory ??
+                                  'Bitte Kategorie wählen',
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       SegmentedButton<RecurringInterval>(
@@ -391,7 +340,18 @@ class _RecurringExpensesScreenState
                           ),
                         ],
                       ),
-                      if (existing != null)
+                      // Always show next transaction date (at both CREATE and EDIT)
+                      if (!_isValidForNextDate(selectedStartDate))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          child: Text(
+                            'Startdatum muss in Zukunft oder heute sein',
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(ctx).colorScheme.error,
+                            ),
+                          ),
+                        )
+                      else
                         Padding(
                           padding: const EdgeInsets.only(top: 8, bottom: 8),
                           child: Row(
@@ -458,6 +418,9 @@ class _RecurringExpensesScreenState
                                     ref.invalidate(
                                       currentMonthExpensesProvider,
                                     );
+                                    // Invalidate chart/statistics providers
+                                    ref.invalidate(spendingByCategoryProvider);
+                                    ref.invalidate(spendingSummaryProvider);
                                     if (ctx.mounted) {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
                                         const SnackBar(
@@ -538,6 +501,128 @@ class _RecurringExpensesScreenState
     );
   }
 
+  String _categoryPickerLabel(
+    List<CategoryEntity> categories,
+    int? categoryId, {
+    required String fallback,
+  }) {
+    if (categoryId == null) return fallback;
+    final selected = categories.where((c) => c.id == categoryId).firstOrNull;
+    if (selected == null) return fallback;
+    if (selected.parentId == null) return selected.name;
+    final parent = categories
+        .where((c) => c.id == selected.parentId)
+        .firstOrNull;
+    if (parent == null) return selected.name;
+    return '${parent.name} -> ${selected.name}';
+  }
+
+  Future<(int, int?)?> _showCategoryPickerModal(
+    BuildContext context,
+    List<CategoryEntity> categories, {
+    int? selectedCategoryId,
+  }) {
+    int? activeParentId = categories
+        .where((c) => c.id == selectedCategoryId)
+        .firstOrNull
+        ?.parentId;
+
+    return showModalBottomSheet<(int, int?)>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final visibleCategories = activeParentId == null
+                ? categories.where((c) => c.parentId == null).toList()
+                : categories
+                      .where((c) => c.parentId == activeParentId)
+                      .toList();
+            final activeParent = activeParentId == null
+                ? null
+                : categories.where((c) => c.id == activeParentId).firstOrNull;
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: MediaQuery.of(ctx).viewPadding.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        if (activeParentId != null)
+                          IconButton(
+                            onPressed: () =>
+                                setModalState(() => activeParentId = null),
+                            icon: const Icon(Icons.arrow_back),
+                          ),
+                        Expanded(
+                          child: Text(
+                            activeParent?.name ?? 'Kategorie',
+                            style: Theme.of(ctx).textTheme.titleMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            AppLocalizations.of(context)?.cancel ?? 'Abbrechen',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: visibleCategories.length,
+                        itemBuilder: (ctx, index) {
+                          final category = visibleCategories[index];
+                          final hasChildren = categories.any(
+                            (c) => c.parentId == category.id,
+                          );
+                          final isSelected = selectedCategoryId == category.id;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Color(
+                                category.colorValue,
+                              ).withValues(alpha: 0.2),
+                              child: const Icon(Icons.category, size: 18),
+                            ),
+                            title: Text(category.name),
+                            trailing: hasChildren
+                                ? const Icon(Icons.chevron_right)
+                                : (isSelected ? const Icon(Icons.check) : null),
+                            onTap: () {
+                              if (hasChildren) {
+                                setModalState(
+                                  () => activeParentId = category.id,
+                                );
+                                return;
+                              }
+                              Navigator.pop(ctx, (
+                                category.id,
+                                category.parentId,
+                              ));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   String _categoryPath(Map<int, CategoryEntity> catMap, int categoryId) {
     final cat = catMap[categoryId];
     if (cat == null) return '';
@@ -557,5 +642,14 @@ class _RecurringExpensesScreenState
     } else {
       return DateTime(startDate.year + 1, startDate.month, startDate.day);
     }
+  }
+
+  /// Check if start date is valid for next date calculation.
+  /// Start date must be today or in the future.
+  bool _isValidForNextDate(DateTime startDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    return !start.isBefore(today);
   }
 }

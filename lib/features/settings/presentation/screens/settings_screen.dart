@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
@@ -262,7 +263,16 @@ class SettingsScreen extends ConsumerWidget {
               'Biometrie aktivieren',
         );
         if (!authenticated) return;
-      } catch (_) {
+      } catch (e) {
+        // Copy full error to clipboard
+        final errorText = e.toString();
+        await Clipboard.setData(ClipboardData(text: errorText));
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Fehler kopiert in Zwischenablage')),
+          );
+        }
         return;
       }
     }

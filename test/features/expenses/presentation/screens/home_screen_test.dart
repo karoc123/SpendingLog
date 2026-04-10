@@ -42,7 +42,8 @@ void main() {
 
   final testCategories = <CategoryEntity>[
     makeCategory(id: 1, name: 'Lebensmittel'),
-    makeCategory(id: 2, name: 'Freizeit'),
+    makeCategory(id: 2, name: 'Kaffee', parentId: 1),
+    makeCategory(id: 3, name: 'Freizeit'),
   ];
 
   final testExpenses = <ExpenseEntity>[
@@ -50,7 +51,7 @@ void main() {
       id: 'e1',
       amountCents: 1250,
       description: 'Kaffee',
-      categoryId: 1,
+      categoryId: 2,
     ),
   ];
 
@@ -69,7 +70,7 @@ void main() {
     ];
   }
 
-  testWidgets('HomeScreen renders amount field and category chips', (
+  testWidgets('HomeScreen renders amount field and category picker', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -80,9 +81,31 @@ void main() {
     // Amount text field should be present
     expect(find.byType(TextField), findsWidgets);
 
-    // Category chips should be shown
-    expect(find.text('Lebensmittel'), findsWidgets);
-    expect(find.text('Freizeit'), findsWidgets);
+    // Category picker field should be shown
+    expect(find.text('Bitte Kategorie wählen'), findsOneWidget);
+  });
+
+  testWidgets('HomeScreen picks subcategory through modal', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const HomeScreen(), overrides: buildOverrides()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Bitte Kategorie wählen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lebensmittel'), findsOneWidget);
+    expect(find.text('Freizeit'), findsOneWidget);
+
+    await tester.tap(find.text('Lebensmittel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kaffee'), findsWidgets);
+
+    await tester.tap(find.text('Kaffee').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lebensmittel -> Kaffee'), findsOneWidget);
   });
 
   testWidgets('HomeScreen shows recent expenses', (tester) async {

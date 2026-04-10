@@ -11,6 +11,7 @@ import '../../../../core/utils/icon_map.dart';
 import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
+import '../../../statistics/presentation/providers/statistics_providers.dart';
 import '../../domain/entities/autocomplete_suggestion.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../providers/expense_providers.dart';
@@ -32,7 +33,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _descriptionFocusNode = FocusNode();
 
   int? _selectedCategoryId;
-  int? _selectedParentCategoryId;
   DateTime _selectedDate = DateTime.now();
   List<AutocompleteSuggestion> _suggestions = [];
   bool _showSuggestions = false;
@@ -83,11 +83,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _descriptionController.text = suggestion.description;
     _amountController.text = (suggestion.amountCents / 100).toStringAsFixed(2);
     _selectedCategoryId = suggestion.categoryId;
-    final categories = ref.read(allCategoriesProvider).value ?? [];
-    final selected = categories
-        .where((c) => c.id == suggestion.categoryId)
-        .firstOrNull;
-    _selectedParentCategoryId = selected?.parentId;
     _descriptionController.addListener(_onDescriptionChanged);
     setState(() {
       _showSuggestions = false;
@@ -145,7 +140,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _descriptionController.addListener(_onDescriptionChanged);
       _notesController.clear();
       _selectedCategoryId = null;
-      _selectedParentCategoryId = null;
       _selectedDate = DateTime.now();
       _amountFocusNode.requestFocus();
       setState(() {});
@@ -156,6 +150,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ref.invalidate(expenseListProvider);
       ref.invalidate(currentMonthExpensesProvider);
       ref.invalidate(committedAmountProvider);
+      // Invalidate chart/statistics providers
+      ref.invalidate(spendingByCategoryProvider);
+      ref.invalidate(spendingSummaryProvider);
     }
   }
 
@@ -231,6 +228,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             error: (_, __) => const SizedBox.shrink(),
           ),
 
+          // Recent expenses list (scrollable top).
+          Expanded(
+            child: expensesAsync.when(
+              data: (expenses) {
+                if (expenses.isEmpty) {
+                  return Center(
+                    child: Text(l10n?.noExpenses ?? 'Noch keine Ausgaben'),
+                  );
+                }
+                return ListView.builder(
+                  itemCount: expenses.length,
+                  padding: const EdgeInsets.only(bottom: 16),
+                  itemBuilder: (context, index) {
+                    final expense = expenses[index];
+                    return _ExpenseListTile(
+                      expense: expense,
+                      currencySymbol: currencySymbol,
+                      categories: categoriesAsync.value ?? [],
+                      onDismissed: () async {
+                        await ref.read(deleteExpenseProvider).call(expense.id);
+                        ref.invalidate(expenseListProvider);
+                        ref.invalidate(currentMonthExpensesProvider);
+                        // Invalidate chart/statistics providers
+                        ref.invalidate(spendingByCategoryProvider);
+                        ref.invalidate(spendingSummaryProvider);
+                      },
+                      onTap: () => _showEditExpenseSheet(context, expense),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+
+          const Divider(height: 1),
+
           // Expense input form.
           Padding(
             padding: const EdgeInsets.all(16),
@@ -262,7 +297,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 // Category selector (top).
                 categoriesAsync.when(
-                  data: (categories) => _buildCategoryChips(categories),
+                  data: (categories) => _buildCategoryPickerField(categories),
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -336,41 +371,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ],
             ),
           ),
-
-          const Divider(height: 1),
-
-          // Recent expenses list.
-          Expanded(
-            child: expensesAsync.when(
-              data: (expenses) {
-                if (expenses.isEmpty) {
-                  return Center(
-                    child: Text(l10n?.noExpenses ?? 'Noch keine Ausgaben'),
-                  );
-                }
-                return ListView.builder(
-                  itemCount: expenses.length,
-                  padding: const EdgeInsets.only(bottom: 16),
-                  itemBuilder: (context, index) {
-                    final expense = expenses[index];
-                    return _ExpenseListTile(
-                      expense: expense,
-                      currencySymbol: currencySymbol,
-                      categories: categoriesAsync.value ?? [],
-                      onDismissed: () async {
-                        await ref.read(deleteExpenseProvider).call(expense.id);
-                        ref.invalidate(expenseListProvider);
-                        ref.invalidate(currentMonthExpensesProvider);
-                      },
-                      onTap: () => _showEditExpenseSheet(context, expense),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-            ),
-          ),
         ],
       ),
     );
@@ -415,83 +415,161 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryChips(List<CategoryEntity> categories) {
-    final parents = categories.where((c) => c.parentId == null).toList();
-    final selected = categories
-        .where((c) => c.id == _selectedCategoryId)
-        .firstOrNull;
-    final activeParentId = _selectedParentCategoryId ?? selected?.parentId;
-    final subcategories = activeParentId == null
-        ? <CategoryEntity>[]
-        : categories.where((c) => c.parentId == activeParentId).toList();
+  Widget _buildCategoryPickerField(List<CategoryEntity> categories) {
+    final selectedLabel = _categoryLabel(
+      categories,
+      _selectedCategoryId,
+      fallback:
+          AppLocalizations.of(context)?.selectCategory ??
+          'Bitte Kategorie wählen',
+    );
 
-    if (activeParentId != null && subcategories.isNotEmpty) {
-      final activeParent = categories
-          .where((c) => c.id == activeParentId)
-          .firstOrNull;
-      return ConstrainedBox(
-        constraints: const BoxConstraints(maxHeight: 96),
-        child: SingleChildScrollView(
-          child: Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              ChoiceChip(
-                label: Text('← ${activeParent?.name ?? 'Kategorie'}'),
-                selected: false,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedParentCategoryId = null;
-                    _selectedCategoryId = null;
-                  });
-                },
-              ),
-              ...subcategories.map((cat) {
-                final isSelected = _selectedCategoryId == cat.id;
-                return ChoiceChip(
-                  label: Text(cat.name),
-                  avatar: Icon(iconFromName(cat.iconName), size: 18),
-                  selected: isSelected,
-                  selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
-                  onSelected: (_) =>
-                      setState(() => _selectedCategoryId = cat.id),
-                );
-              }),
-            ],
-          ),
+    return InkWell(
+      onTap: () async {
+        final selection = await _showCategoryPickerModal(
+          context,
+          categories,
+          selectedCategoryId: _selectedCategoryId,
+        );
+        if (selection == null || !mounted) return;
+        setState(() {
+          _selectedCategoryId = selection.$1;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Kategorie',
+          isDense: true,
+          suffixIcon: const Icon(Icons.chevron_right),
         ),
-      );
-    }
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: 96),
-      child: SingleChildScrollView(
-        child: Wrap(
-          spacing: 6,
-          runSpacing: 4,
-          children: parents.map((cat) {
-            final isSelected = _selectedCategoryId == cat.id;
-            return ChoiceChip(
-              label: Text(cat.name),
-              avatar: Icon(iconFromName(cat.iconName), size: 18),
-              selected: isSelected,
-              selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
-              onSelected: (_) {
-                final hasChildren = categories.any((c) => c.parentId == cat.id);
-                setState(() {
-                  if (hasChildren) {
-                    _selectedParentCategoryId = cat.id;
-                    _selectedCategoryId = null;
-                  } else {
-                    _selectedParentCategoryId = null;
-                    _selectedCategoryId = cat.id;
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
+        child: Text(selectedLabel),
       ),
+    );
+  }
+
+  String _categoryLabel(
+    List<CategoryEntity> categories,
+    int? categoryId, {
+    required String fallback,
+  }) {
+    if (categoryId == null) return fallback;
+    final selected = categories.where((c) => c.id == categoryId).firstOrNull;
+    if (selected == null) return fallback;
+    if (selected.parentId == null) return selected.name;
+    final parent = categories
+        .where((c) => c.id == selected.parentId)
+        .firstOrNull;
+    if (parent == null) return selected.name;
+    return '${parent.name} -> ${selected.name}';
+  }
+
+  Future<(int, int?)?> _showCategoryPickerModal(
+    BuildContext context,
+    List<CategoryEntity> categories, {
+    int? selectedCategoryId,
+  }) {
+    int? activeParentId = categories
+        .where((c) => c.id == selectedCategoryId)
+        .firstOrNull
+        ?.parentId;
+
+    return showModalBottomSheet<(int, int?)>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final visibleCategories = activeParentId == null
+                ? categories.where((c) => c.parentId == null).toList()
+                : categories
+                      .where((c) => c.parentId == activeParentId)
+                      .toList();
+            final activeParent = activeParentId == null
+                ? null
+                : categories.where((c) => c.id == activeParentId).firstOrNull;
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: MediaQuery.of(ctx).viewPadding.bottom + 16,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        if (activeParentId != null)
+                          IconButton(
+                            onPressed: () =>
+                                setModalState(() => activeParentId = null),
+                            icon: const Icon(Icons.arrow_back),
+                          ),
+                        Expanded(
+                          child: Text(
+                            activeParent?.name ?? 'Kategorie',
+                            style: Theme.of(ctx).textTheme.titleMedium,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          child: Text(
+                            AppLocalizations.of(context)?.cancel ?? 'Abbrechen',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: visibleCategories.length,
+                        itemBuilder: (ctx, index) {
+                          final category = visibleCategories[index];
+                          final hasChildren = categories.any(
+                            (c) => c.parentId == category.id,
+                          );
+                          final isSelected = selectedCategoryId == category.id;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: Color(
+                                category.colorValue,
+                              ).withValues(alpha: 0.2),
+                              child: Icon(
+                                iconFromName(category.iconName),
+                                size: 18,
+                              ),
+                            ),
+                            title: Text(category.name),
+                            trailing: hasChildren
+                                ? const Icon(Icons.chevron_right)
+                                : (isSelected ? const Icon(Icons.check) : null),
+                            onTap: () {
+                              if (hasChildren) {
+                                setModalState(
+                                  () => activeParentId = category.id,
+                                );
+                                return;
+                              }
+                              Navigator.pop(ctx, (
+                                category.id,
+                                category.parentId,
+                              ));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -502,7 +580,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final descCtrl = TextEditingController(text: expense.description);
     final notesCtrl = TextEditingController(text: expense.notes ?? '');
     int? editCategoryId = expense.categoryId;
-    int? editParentCategoryId;
     DateTime editDate = expense.date;
     final l10n = AppLocalizations.of(context);
 
@@ -556,84 +633,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       const SizedBox(height: 12),
                       categoriesAsync.when(
                         data: (categories) {
-                          final selected = categories
-                              .where((c) => c.id == editCategoryId)
-                              .firstOrNull;
-                          final activeParentId =
-                              editParentCategoryId ?? selected?.parentId;
-                          final subcategories = activeParentId == null
-                              ? <CategoryEntity>[]
-                              : categories
-                                    .where((c) => c.parentId == activeParentId)
-                                    .toList();
-
-                          if (activeParentId != null &&
-                              subcategories.isNotEmpty) {
-                            return ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 96),
-                              child: SingleChildScrollView(
-                                child: Wrap(
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  children: [
-                                    ChoiceChip(
-                                      label: const Text('← Kategorie'),
-                                      selected: false,
-                                      onSelected: (_) => setSheetState(() {
-                                        editParentCategoryId = null;
-                                        editCategoryId = null;
-                                      }),
-                                    ),
-                                    ...subcategories.map((cat) {
-                                      return ChoiceChip(
-                                        label: Text(cat.name),
-                                        selected: editCategoryId == cat.id,
-                                        selectedColor: Color(
-                                          cat.colorValue,
-                                        ).withValues(alpha: 0.3),
-                                        onSelected: (_) => setSheetState(
-                                          () => editCategoryId = cat.id,
-                                        ),
-                                      );
-                                    }),
-                                  ],
-                                ),
+                          return InkWell(
+                            onTap: () async {
+                              final selection = await _showCategoryPickerModal(
+                                ctx,
+                                categories,
+                                selectedCategoryId: editCategoryId,
+                              );
+                              if (selection == null) return;
+                              setSheetState(() {
+                                editCategoryId = selection.$1;
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Kategorie',
+                                suffixIcon: const Icon(Icons.chevron_right),
                               ),
-                            );
-                          }
-
-                          final parents = categories
-                              .where((c) => c.parentId == null)
-                              .toList();
-                          return ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 96),
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: parents.map((cat) {
-                                  return ChoiceChip(
-                                    label: Text(cat.name),
-                                    selected: editCategoryId == cat.id,
-                                    selectedColor: Color(
-                                      cat.colorValue,
-                                    ).withValues(alpha: 0.3),
-                                    onSelected: (_) {
-                                      final hasChildren = categories.any(
-                                        (c) => c.parentId == cat.id,
-                                      );
-                                      setSheetState(() {
-                                        if (hasChildren) {
-                                          editParentCategoryId = cat.id;
-                                          editCategoryId = null;
-                                        } else {
-                                          editParentCategoryId = null;
-                                          editCategoryId = cat.id;
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
+                              child: Text(
+                                _categoryLabel(
+                                  categories,
+                                  editCategoryId,
+                                  fallback:
+                                      l10n?.selectCategory ??
+                                      'Bitte Kategorie wählen',
+                                ),
                               ),
                             ),
                           );
@@ -713,6 +738,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   .call(updated);
                               ref.invalidate(expenseListProvider);
                               ref.invalidate(currentMonthExpensesProvider);
+                              // Invalidate chart/statistics providers
+                              ref.invalidate(spendingByCategoryProvider);
+                              ref.invalidate(spendingSummaryProvider);
                               if (ctx.mounted) Navigator.pop(ctx);
                             },
                             child: Text(l10n?.save ?? 'Speichern'),

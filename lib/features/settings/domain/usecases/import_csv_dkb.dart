@@ -167,17 +167,36 @@ class ImportCsvDkb {
       if (existingCat != null) {
         categoryId = existingCat.id;
       } else {
-        /// No history for this recipient - create a new category
-        /// Use "Transaktionen" or similar default by recipient
-        final newCatId = await _categoryRepository.addCategory(
-          CategoryEntity(
-            id: 0,
-            name: recipient,
-            colorValue: _deterministicColor(recipient),
-            createdAt: DateTime.now(),
-          ),
-        );
-        categoryId = newCatId;
+        /// No history for this recipient - use "Import" fallback category.
+        CategoryEntity? importCat;
+        for (final category in categoryMap.values) {
+          if (_normalizeName(category.name) == 'import' &&
+              category.parentId == null) {
+            importCat = category;
+            break;
+          }
+        }
+
+        if (importCat == null) {
+          final now = DateTime.now();
+          final newCatId = await _categoryRepository.addCategory(
+            CategoryEntity(
+              id: 0,
+              name: 'Import',
+              colorValue: _deterministicColor('Import'),
+              createdAt: now,
+            ),
+          );
+          categoryId = newCatId;
+          categoryMap[newCatId] = CategoryEntity(
+            id: newCatId,
+            name: 'Import',
+            colorValue: _deterministicColor('Import'),
+            createdAt: now,
+          );
+        } else {
+          categoryId = importCat.id;
+        }
       }
 
       final expense = ExpenseEntity(

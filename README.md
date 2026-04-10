@@ -6,18 +6,18 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 
 ## Features
 
-- **Fast expense entry** with improved thumb-friendly layout (date/category/notes top, amount/description bottom)
-- **Two-step category selection** (parent -> subcategory) across create/edit flows
-- **Recurring expenses** (monthly/yearly) with next date calculation and "generate now" button
+- **Fast expense entry** with recent transactions preview on top and the entry form anchored below for quick one-handed input
+- **Two-step category selection** via a consistent modal picker (parent -> subcategory) across create/edit flows
+- **Recurring expenses** (monthly/yearly) with live next-date preview during create/edit and a "generate now" button
 - **Interactive statistics** with clickable pie + bar chart drill-down filtering
 - **Transactions view** with month separators, transaction count, and category path display
 - **Category management** with transaction counts per category
 - **CSV/JSON export & import**:
-  - **Multiple import formats**: Monekin (standard) and DKB Bank (German bank CSV) with automatic category lookup by recipient
+  - **Multiple import formats**: Monekin (standard) and DKB Bank (German bank CSV) with automatic category lookup by recipient and an on-demand `Import` fallback category
   - **Import safeguards**: positive values skipped, deterministic category colors, subcategory color inherits parent, unused seeded defaults cleaned up
 - **Context help button** in each main tab screen (Home, Transactions, Statistics, Recurring, Settings)
 - **Settings enhancements** with links to GitHub (GPL-3.0) and Monekin project
-- **Biometric protection** (fingerprint/face on supported devices) with fixed toggle behavior
+- **Biometric protection** (fingerprint/face on supported devices) with clipboard-backed error reporting on auth failures
 - **Localization** in German (default) and English
 - **OLED-friendly dark theme** (true black scaffold, slightly elevated surfaces)
 - **Android navigation** improved to properly handle back button within app hierarchy
