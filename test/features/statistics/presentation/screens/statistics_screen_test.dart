@@ -1,0 +1,85 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:spending_log/features/statistics/presentation/screens/statistics_screen.dart';
+import 'package:spending_log/features/statistics/presentation/providers/statistics_providers.dart';
+import 'package:spending_log/features/statistics/domain/usecases/get_spending_by_category.dart';
+import 'package:spending_log/features/statistics/domain/usecases/get_spending_summary.dart';
+import 'package:spending_log/features/expenses/presentation/providers/expense_providers.dart';
+import 'package:spending_log/core/providers/core_providers.dart';
+
+import '../../../../helpers/test_helpers.dart';
+import '../../../../helpers/widget_test_helpers.dart';
+
+void main() {
+  final testSpending = [
+    CategorySpending(
+      categoryId: 1,
+      categoryName: 'Lebensmittel',
+      colorValue: 0xFF4CAF50,
+      iconName: 'shopping_cart',
+      totalCents: 5000,
+      transactionCount: 3,
+    ),
+    CategorySpending(
+      categoryId: 2,
+      categoryName: 'Freizeit',
+      colorValue: 0xFF2196F3,
+      iconName: 'sports_esports',
+      totalCents: 2000,
+      transactionCount: 1,
+    ),
+  ];
+
+  const testSummary = SpendingSummary(
+    totalCents: 7000,
+    topCategoryName: '1',
+    transactionCount: 4,
+  );
+
+  List<Override> buildOverrides() {
+    return [
+      spendingByCategoryProvider.overrideWith((ref) async => testSpending),
+      spendingSummaryProvider.overrideWith((ref) async => testSummary),
+      currencySymbolProvider.overrideWith((ref) => Stream.value('€')),
+      currentMonthExpensesProvider.overrideWith((ref) => Stream.value([])),
+      allCategoriesProvider.overrideWith(
+        (ref) => Stream.value([
+          makeCategory(id: 1, name: 'Lebensmittel'),
+          makeCategory(id: 2, name: 'Freizeit'),
+        ]),
+      ),
+    ];
+  }
+
+  testWidgets('StatisticsScreen renders app bar', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const StatisticsScreen(), overrides: buildOverrides()),
+    );
+    // Use pump with duration because fl_chart has ongoing animations.
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(AppBar), findsOneWidget);
+  });
+
+  testWidgets('StatisticsScreen shows category spending', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const StatisticsScreen(), overrides: buildOverrides()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Lebensmittel'), findsWidgets);
+    expect(find.text('Freizeit'), findsWidgets);
+  });
+
+  testWidgets('StatisticsScreen shows total amount', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const StatisticsScreen(), overrides: buildOverrides()),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    // 7000 cents = 70.00, should appear somewhere
+    expect(find.textContaining('70'), findsWidgets);
+  });
+}

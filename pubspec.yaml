@@ -1,0 +1,52 @@
+name: spending_log
+description: "SpendingLog – Personal expense tracker with smart autocomplete, recurring expenses, and local-only privacy."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Database
+  drift: ^2.25.0
+  sqlite3_flutter_libs: ^0.5.34
+  path_provider: ^2.1.5
+  path: ^1.9.1
+
+  # Charts
+  fl_chart: ^0.70.2
+
+  # Biometrics
+  local_auth: ^2.3.0
+
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  csv: ^6.0.0
+  share_plus: ^10.1.4
+  file_picker: ^8.3.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.25.0
+  build_runner: ^2.4.15
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
+  generate: true
