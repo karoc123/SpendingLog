@@ -1,0 +1,20 @@
+ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory
+e1b2c3d4-4f56-7890-abcd-ef1234567890,-45.20,2026-05-10 10:15:00,Supermarkt Filiale,,Girokonto,EUR,Food & Dining,Groceries
+b1c2d3e4-f5a6-7890-bcde-f0123456789a,-12.50,2026-05-01 12:30:00,Streaming Dienst,,Girokonto,EUR,Software,Subscription
+c2d3e4f5-a6b7-8901-cdef-0123456789ab,-650.00,2026-05-01 08:00:00,Miete Hauptwohnung,,Girokonto,EUR,Housing,Rental
+d3e4f5a6-b7c8-9012-def0-123456789abc,-35.00,2026-05-02 14:20:00,Fitnessstudio,,Girokonto,EUR,Aesthetics & Health,Fitness
+e4f5a6b7-c8d9-0123-ef01-23456789abcd,-22.15,2026-05-03 18:45:00,Tankstelle Stadt,,Girokonto,EUR,Transportation,Fuel
+f5a6b7c8-d9e0-1234-f012-3456789abcde,-8.90,2026-05-04 11:05:00,Bäckerei am Markt,,Girokonto,EUR,Food & Dining,Groceries
+a1b2c3d4-e5f6-7890-abcd-ef1234567890,-55.00,2026-05-05 16:30:00,Internet & Telefon,,Girokonto,EUR,Housing,Internet
+b2c3d4e5-f6a7-8901-bcde-f0123456789a,-120.00,2026-05-06 09:15:00,Stromabschlag,,Girokonto,EUR,Housing,Electricity
+c3d4e5f6-a7b8-9012-cdef-0123456789ab,-300.00,2026-05-07 10:00:00,ETF Sparplan,,Girokonto,EUR,Sparpläne,
+d4e5f6a7-b8c9-0123-def0-123456789abc,-15.40,2026-05-08 19:20:00,Drogeriemarkt,,Girokonto,EUR,Purchases,Personal Care
+e5f6a7b8-c9d0-1234-ef01-23456789abcd,-45.00,2026-05-09 20:15:00,Restaurant Besuch,,Girokonto,EUR,Food & Dining,Eating out
+f6a7b8c9-d0e1-2345-f012-3456789abcde,-25.00,2026-05-10 13:00:00,Parkgebühren City,,Girokonto,EUR,Transportation,Tolls and parking
+a2b3c4d5-e6f7-8901-abcd-ef1234567890,-4.50,2026-05-11 08:30:00,Kiosk Zeitung,,Girokonto,EUR,Others,
+b3c4d5e6-f7a8-9012-bcde-f0123456789a,-75.20,2026-05-12 17:40:00,Bekleidungsgeschäft,,Girokonto,EUR,Purchases,Clothes
+c4d5e6f7-a8b9-0123-cdef-0123456789ab,-18.36,2026-05-15 01:00:00,Rundfunkbeitrag,,Girokonto,EUR,Housing,Rental
+d5e6f7a8-b9c0-1234-def0-123456789abc,-9.99,2026-05-16 11:20:00,Cloud Speicher,,Girokonto,EUR,Software,
+e6f7a8b9-c0d1-2345-ef01-23456789abcd,-50.00,2026-05-17 15:00:00,Bargeldabhebung,,Girokonto,EUR,Geld abheben,
+f7a8b9c0-d1e2-3456-f012-3456789abcde,-2.80,2026-05-18 09:10:00,ÖPNV Einzelticket,,Girokonto,EUR,Transportation,Public Transport
+a3b4c5d6-e7f8-9012-abcd-ef1234567890,-32.10,2026-05-19 14:50:00,Online Marktplatz,Zubehör,Girokonto,EUR,Purchases,Electronics

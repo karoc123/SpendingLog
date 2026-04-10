@@ -1,0 +1,67 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.x"
+          channel: "stable"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # Writes android/app/upload-keystore.jks and android/key.properties when
+      # all four signing secrets are present. Skips silently otherwise and lets
+      # Gradle fall back to debug signing.
+      - name: Setup release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$STORE_PASSWORD" ]; then
+            echo "::notice::Signing secrets not configured — APK will be debug-signed (not suitable for production upgrades)"
+            exit 0
+          fi
+
+          # Strip all whitespace before decoding to tolerate copy/paste artefacts.
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" \
+            | tr -d '[:space:]' \
+            | base64 -d > android/app/upload-keystore.jks
+
+          BYTES=$(wc -c < android/app/upload-keystore.jks)
+          echo "::notice::Keystore decoded successfully (${BYTES} bytes)"
+
+          # storeFile is resolved by Gradle relative to the module dir (android/app/).
+          # The keystore lives at android/app/upload-keystore.jks, so the value is
+          # just 'upload-keystore.jks' — no subdirectory prefix.
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
+            "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
+            > android/key.properties
+
+          echo "::notice::android/key.properties written"
+
+      - name: Build APK
+        run: |
+          flutter build apk \
+            --release \
+            --no-tree-shake-icons \
+            --build-number ${{ github.run_number }} \
+            --build-name "1.0.${{ github.run_number }}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: app-release-${{ github.run_number }}
+          path: build/app/outputs/flutter-apk/app-release.apk
