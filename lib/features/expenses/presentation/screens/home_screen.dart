@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/icon_map.dart';
+import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
 import '../../domain/entities/autocomplete_suggestion.dart';
@@ -185,7 +187,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n?.appTitle ?? 'SpendingLog')),
+      appBar: AppBar(
+        title: Text(l10n?.appTitle ?? 'SpendingLog'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showScreenHelp(
+              context,
+              deTitle: 'Hilfe: Ausgaben',
+              enTitle: 'Help: Expenses',
+              deBody:
+                  'Erfasse neue Ausgaben schnell, waehle erst eine Kategorie und dann die Unterkategorie. Tippe auf einen Eintrag zum Bearbeiten.',
+              enBody:
+                  'Quickly add expenses, select a parent category then a subcategory, and tap entries to edit them.',
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // Committed amount banner.
@@ -403,6 +421,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         : categories.where((c) => c.parentId == activeParentId).toList();
 
     if (activeParentId != null && subcategories.isNotEmpty) {
+      final activeParent = categories
+          .where((c) => c.id == activeParentId)
+          .firstOrNull;
       return ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 96),
         child: SingleChildScrollView(
@@ -411,7 +432,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             runSpacing: 4,
             children: [
               ChoiceChip(
-                label: const Text('← Kategorie'),
+                label: Text('← ${activeParent?.name ?? 'Kategorie'}'),
                 selected: false,
                 onSelected: (_) {
                   setState(() {
@@ -639,9 +660,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 setSheetState(() => editDate = picked);
                               }
                             },
-                            child: Text(DateFormat.yMd().format(editDate)),
+                            child: Text(
+                              DateFormat.yMd(
+                                Localizations.localeOf(ctx).toString(),
+                              ).format(editDate),
+                            ),
                           ),
                           const Spacer(),
+                          IconButton.outlined(
+                            tooltip: 'Wiederkehrend erstellen',
+                            onPressed: () {
+                              final cents = parseAmountToCents(amountCtrl.text);
+                              if (cents == null) return;
+                              final uri = Uri(
+                                path: '/recurring',
+                                queryParameters: {
+                                  'name': descCtrl.text.trim(),
+                                  'amountCents': '$cents',
+                                  if (editCategoryId != null)
+                                    'categoryId': '$editCategoryId',
+                                  'startDate': editDate.toIso8601String(),
+                                },
+                              ).toString();
+                              if (ctx.mounted) {
+                                Navigator.pop(ctx);
+                                context.push(uri);
+                              }
+                            },
+                            icon: const Icon(Icons.repeat),
+                          ),
                           FilledButton(
                             onPressed: () async {
                               final cents = parseAmountToCents(amountCtrl.text);

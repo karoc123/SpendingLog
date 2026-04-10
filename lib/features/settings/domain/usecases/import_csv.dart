@@ -1,12 +1,23 @@
 import 'package:csv/csv.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utils/icon_map.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../../expenses/domain/repositories/expense_repository.dart';
 import '../../../categories/domain/entities/category_entity.dart';
 import '../../../categories/domain/repositories/category_repository.dart';
 
 const _uuid = Uuid();
+const _seedDefaultParentNames = {
+  'lebensmittel',
+  'haushalt',
+  'freizeit',
+  'essen',
+  'transport',
+  'gesundheit',
+  'arbeit',
+  'sonstiges',
+};
 
 /// Imports expenses from a CSV string.
 ///
@@ -55,6 +66,14 @@ class ImportCsv {
     return '$parentId::${_normalizeName(subcategoryName)}';
   }
 
+  static int _deterministicColor(String name) {
+    var hash = 0;
+    for (final code in name.codeUnits) {
+      hash = (hash * 31 + code) & 0x7fffffff;
+    }
+    return availableCategoryColors[hash % availableCategoryColors.length];
+  }
+
   Future<int> call(String csvContent) async {
     final trimmed = csvContent.trim();
     if (trimmed.isEmpty) return 0;
@@ -98,6 +117,9 @@ class ImportCsv {
       final amount = _parseAmount(row[1].toString());
       if (amount == null) continue;
 
+      // Skip positive values (credits/refunds) - import only expenses.
+      if (amount >= 0) continue;
+
       // Convert to positive cents (CSV amounts may be negative for expenses).
       final amountCents = (amount.abs() * 100).round();
 
@@ -122,12 +144,14 @@ class ImportCsv {
             CategoryEntity(
               id: 0,
               name: parentCategoryName,
+              colorValue: _deterministicColor(parentCategoryName),
               createdAt: DateTime.now(),
             ),
           );
           parentCat = CategoryEntity(
             id: newId,
             name: parentCategoryName,
+            colorValue: _deterministicColor(parentCategoryName),
             createdAt: DateTime.now(),
           );
           categoriesByName[_normalizeName(parentCategoryName)] = parentCat;
@@ -142,6 +166,7 @@ class ImportCsv {
                 id: 0,
                 name: categoryName,
                 parentId: parentCat.id,
+                colorValue: parentCat.colorValue,
                 createdAt: DateTime.now(),
               ),
             );
@@ -149,6 +174,7 @@ class ImportCsv {
               id: newId,
               name: categoryName,
               parentId: parentCat.id,
+              colorValue: parentCat.colorValue,
               createdAt: DateTime.now(),
             );
             subcategoriesByParentAndName[key] = subCat;
@@ -181,6 +207,34 @@ class ImportCsv {
       imported++;
     }
 
+    await _cleanupUnusedSeedDefaults();
+
     return imported;
+  }
+
+  Future<void> _cleanupUnusedSeedDefaults() async {
+    final allCategories = await _categoryRepository.getAllCategories();
+    final allExpenses = await _expenseRepository.getAllExpenses();
+    final usedCategoryIds = allExpenses.map((e) => e.categoryId).toSet();
+
+    final categoryById = {for (final c in allCategories) c.id: c};
+    final usedWithAncestors = <int>{...usedCategoryIds};
+    for (final id in usedCategoryIds) {
+      var current = categoryById[id];
+      while (current?.parentId != null) {
+        usedWithAncestors.add(current!.parentId!);
+        current = categoryById[current.parentId!];
+      }
+    }
+
+    for (final category in allCategories) {
+      if (category.parentId != null) continue;
+      final normalized = _normalizeName(category.name);
+      if (!_seedDefaultParentNames.contains(normalized)) continue;
+      if (usedWithAncestors.contains(category.id)) continue;
+      final hasChildren = allCategories.any((c) => c.parentId == category.id);
+      if (hasChildren) continue;
+      await _categoryRepository.deleteCategory(category.id);
+    }
   }
 }

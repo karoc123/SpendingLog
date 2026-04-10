@@ -7,13 +7,16 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 ## Features
 
 - **Fast expense entry** with auto-focused amount field and smart autocomplete
-- **Category hierarchy** (parent + subcategories) with icons and colors
-- **Recurring expenses** (monthly/yearly) with automatic entry generation
-- **Interactive statistics** with pie charts and drill-down filtering
+- **Two-step category selection** (parent -> subcategory) across create/edit flows
+- **Recurring expenses** (monthly/yearly) with automatic generation and manual "generate now"
+- **Interactive statistics** with clickable pie + bar chart drill-down filtering
+- **Transactions view** with month separators, filtered total, and category path display
 - **CSV/JSON export & import** for data portability
+- **CSV import safeguards**: positive values are skipped, deterministic category colors, subcategory color inherits parent, unused seeded default categories are cleaned up
+- **Context help button** in each main tab screen (Home, Transactions, Statistics, Recurring, Settings)
 - **Biometric protection** (fingerprint/face on supported devices)
 - **Localization** in German (default) and English
-- **Light & dark theme** with Material Design 3
+- **OLED-friendly dark theme** (true black scaffold, slightly elevated surfaces)
 
 ## Tech Stack
 
@@ -78,6 +81,9 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs
 flutter gen-l10n
 
+# Generate launcher icons (after changing app_icon.png)
+dart run flutter_launcher_icons
+
 # Run the app
 flutter run
 ```
@@ -124,6 +130,7 @@ flutter test integration_test/app_test.dart
 GitHub Actions workflows in `.github/workflows/`:
 - **build-web.yml** — `flutter analyze`, `flutter test`, `flutter build web --release`
 - **build-apk.yml** — Android APK build
+- **release.yml** — Manual release build (APK + AAB) and GitHub Release upload
 
 ## License
 

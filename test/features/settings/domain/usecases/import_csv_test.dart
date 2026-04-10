@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:spending_log/core/utils/icon_map.dart';
 import 'package:spending_log/features/expenses/domain/entities/expense_entity.dart';
 import 'package:spending_log/features/categories/domain/entities/category_entity.dart';
 import 'package:spending_log/features/settings/domain/usecases/import_csv.dart';
@@ -21,6 +22,12 @@ void main() {
     mockExpenseRepository = MockExpenseRepository();
     mockCategoryRepository = MockCategoryRepository();
     useCase = ImportCsv(mockExpenseRepository, mockCategoryRepository);
+    when(
+      () => mockExpenseRepository.getAllExpenses(),
+    ).thenAnswer((_) async => []);
+    when(
+      () => mockCategoryRepository.deleteCategory(any()),
+    ).thenAnswer((_) async {});
   });
 
   test('should return 0 for empty CSV', () async {
@@ -66,6 +73,25 @@ void main() {
     expect(captured.amountCents, 1250); // abs of -12.50
     expect(captured.description, 'Coffee');
     expect(captured.categoryId, 5);
+  });
+
+  test('should skip positive amounts (credits/refunds)', () async {
+    final csv =
+        'ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory\n'
+        '1,12.50,2026-01-15,Refund,,Cash,EUR,Food,\n'
+        '2,-9.90,2026-01-15,Coffee,,Cash,EUR,Food,\n';
+
+    when(
+      () => mockCategoryRepository.getAllCategories(),
+    ).thenAnswer((_) async => [makeCategory(id: 1, name: 'Food')]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+
+    final result = await useCase(csv);
+
+    expect(result, 1);
+    verify(() => mockExpenseRepository.addExpense(any())).called(1);
   });
 
   test('should create new category if not exists', () async {
@@ -122,6 +148,32 @@ void main() {
             as CategoryEntity;
     expect(addedCat.name, 'Coffee');
     expect(addedCat.parentId, 1);
+    expect(addedCat.colorValue, parentCat.colorValue);
+  });
+
+  test('should assign deterministic color to new parent category', () async {
+    final csv =
+        'ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory\n'
+        '1,-3.00,2026-01-15,Tea,,Cash,EUR,BrandNewParent,\n';
+
+    when(
+      () => mockCategoryRepository.getAllCategories(),
+    ).thenAnswer((_) async => []);
+    when(
+      () => mockCategoryRepository.addCategory(any()),
+    ).thenAnswer((_) async => 42);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+
+    await useCase(csv);
+
+    final createdParent =
+        verify(
+              () => mockCategoryRepository.addCategory(captureAny()),
+            ).captured.first
+            as CategoryEntity;
+    expect(availableCategoryColors, contains(createdParent.colorValue));
   });
 
   test('should skip rows with invalid amount', () async {
@@ -220,4 +272,30 @@ void main() {
       expect(importedExpenses[1].categoryId, 202);
     },
   );
+
+  test('should delete only unused seeded default parent categories', () async {
+    final csv =
+        'ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory\n'
+        '1,-15.00,2026-01-15,Lunch,,Cash,EUR,Essen,\n';
+
+    final seededUsed = makeCategory(id: 1, name: 'Essen');
+    final seededUnused = makeCategory(id: 2, name: 'Arbeit');
+    final userCategory = makeCategory(id: 99, name: 'Custom');
+
+    when(
+      () => mockCategoryRepository.getAllCategories(),
+    ).thenAnswer((_) async => [seededUsed, seededUnused, userCategory]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockExpenseRepository.getAllExpenses(),
+    ).thenAnswer((_) async => [makeExpense(categoryId: 1)]);
+
+    await useCase(csv);
+
+    verify(() => mockCategoryRepository.deleteCategory(2)).called(1);
+    verifyNever(() => mockCategoryRepository.deleteCategory(1));
+    verifyNever(() => mockCategoryRepository.deleteCategory(99));
+  });
 }

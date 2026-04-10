@@ -8,6 +8,8 @@ The goal is minimal effort when logging expenses to remove any daily friction.
 * **Instant Entry on Launch:** As soon as I open the app, the amount input field is active. I don't need to navigate; I can start typing immediately.
 * **Smart Suggestions (Autocomplete):** When I start typing a description (e.g., "Grocery Store"), the app recognizes my previous entries and automatically suggests the last amount and the matching category. One tap is enough to save.
 * **Categorization:** I assign every expense to a category (e.g., Groceries, Household, Leisure) to understand the structure of my spending later on.
+* **Two-Step Category Choice:** I first choose the parent category and then immediately see only the matching subcategories. This reduces mistakes and speeds up input.
+* **In-Screen Guidance:** Every main tab offers a help action that explains what I can do in that view.
 
 ## 2. Automation: Managing Fixed Costs
 Recurring expenses shouldn't require manual work every month.
@@ -20,13 +22,15 @@ This is where data turns into insights.
 
 * **Time-Based Overview:** I can toggle between a monthly and a yearly view to identify trends in my spending behavior.
 * **Visual Analysis:** A chart shows me at a glance the percentage share of my categories relative to my total spending. I can immediately see if I spent "too much" on leisure this month.
-* **Interactive Drill-down:** If a category in the chart catches my eye (e.g., a large slice for "Miscellaneous"), I can click on it to immediately see a filtered list of all individual transactions that make up that sum.
+* **Interactive Drill-down:** If a category in the pie chart catches my eye, or if I tap a period in the bar chart, I can jump directly to a filtered transaction list.
+* **Readable History:** The transaction list shows month separators and a filtered total so month changes are visible instantly.
 
 ## 4. Privacy & Future-Proofing
 Privacy without sacrificing convenience.
 
 * **Local Control:** My financial data belongs to me. It is stored securely on my smartphone without any third party reading along.
 * **Export Option:** I can export my data as a file at any time to back it up manually or to synchronize it with my own cloud (e.g., Nextcloud) later on.
+* **Import Safety Rules:** During CSV import, positive values (credits) are skipped, category colors are assigned deterministically, and subcategories inherit their parent color.
 * **Biometric Protection:** I can protect app access via fingerprint so that my spending remains private, even if I hand my phone to someone else.
 
 ---

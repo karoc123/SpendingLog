@@ -62,7 +62,25 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/recurring',
-              builder: (context, state) => const RecurringExpensesScreen(),
+              builder: (context, state) {
+                final name = state.uri.queryParameters['name'];
+                final amountCents = state.uri.queryParameters['amountCents'];
+                final categoryId = state.uri.queryParameters['categoryId'];
+                final startDate = state.uri.queryParameters['startDate'];
+
+                return RecurringExpensesScreen(
+                  prefillName: name,
+                  prefillAmountCents: amountCents != null
+                      ? int.tryParse(amountCents)
+                      : null,
+                  prefillCategoryId: categoryId != null
+                      ? int.tryParse(categoryId)
+                      : null,
+                  prefillStartDate: startDate != null
+                      ? DateTime.tryParse(startDate)
+                      : null,
+                );
+              },
             ),
           ],
         ),

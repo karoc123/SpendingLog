@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/screen_help.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
+import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../../expenses/presentation/providers/expense_providers.dart';
 import '../../domain/entities/recurring_expense_entity.dart';
 
@@ -20,11 +23,31 @@ final recurringExpenseListProvider =
       return ref.watch(getRecurringExpensesProvider).watch();
     });
 
-class RecurringExpensesScreen extends ConsumerWidget {
-  const RecurringExpensesScreen({super.key});
+class RecurringExpensesScreen extends ConsumerStatefulWidget {
+  final String? prefillName;
+  final int? prefillAmountCents;
+  final int? prefillCategoryId;
+  final DateTime? prefillStartDate;
+
+  const RecurringExpensesScreen({
+    super.key,
+    this.prefillName,
+    this.prefillAmountCents,
+    this.prefillCategoryId,
+    this.prefillStartDate,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<RecurringExpensesScreen> createState() =>
+      _RecurringExpensesScreenState();
+}
+
+class _RecurringExpensesScreenState
+    extends ConsumerState<RecurringExpensesScreen> {
+  bool _openedPrefill = false;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final recurringAsync = ref.watch(recurringExpenseListProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
@@ -32,9 +55,41 @@ class RecurringExpensesScreen extends ConsumerWidget {
     final categories = categoriesAsync.value ?? [];
     final catMap = {for (final c in categories) c.id: c};
 
+    if (!_openedPrefill &&
+        categories.isNotEmpty &&
+        widget.prefillName != null) {
+      _openedPrefill = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _showRecurringExpenseForm(
+          context,
+          ref,
+          categories,
+          prefillName: widget.prefillName,
+          prefillAmountCents: widget.prefillAmountCents,
+          prefillCategoryId: widget.prefillCategoryId,
+          prefillStartDate: widget.prefillStartDate,
+        );
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n?.recurringExpenses ?? 'Wiederkehrende Ausgaben'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showScreenHelp(
+              context,
+              deTitle: 'Hilfe: Wiederkehrende Ausgaben',
+              enTitle: 'Help: Recurring Expenses',
+              deBody:
+                  'Hier legst du monatliche oder jährliche Regeln an. Du kannst Regeln bearbeiten, deaktivieren oder sofort eine Ausgabe erzeugen.',
+              enBody:
+                  'Manage monthly or yearly recurring rules. You can edit rules, deactivate them, or generate an expense immediately.',
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showRecurringExpenseForm(context, ref, categories),
@@ -64,7 +119,7 @@ class RecurringExpensesScreen extends ConsumerWidget {
                 ),
                 title: Text(item.name),
                 subtitle: Text(
-                  '${cat?.name ?? ''} · ${item.interval == RecurringInterval.monthly ? (l10n?.monthly ?? 'Monatlich') : (l10n?.yearly ?? 'Jährlich')} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}',
+                  '${_categoryPath(catMap, item.categoryId)} · ${item.interval == RecurringInterval.monthly ? (l10n?.monthly ?? 'Monatlich') : (l10n?.yearly ?? 'Jährlich')} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}',
                 ),
                 trailing: Text(
                   formatAmount(item.amountCents, symbol: currencySymbol),
@@ -127,17 +182,27 @@ class RecurringExpensesScreen extends ConsumerWidget {
     WidgetRef ref,
     List<CategoryEntity> categories, {
     RecurringExpenseEntity? existing,
+    String? prefillName,
+    int? prefillAmountCents,
+    int? prefillCategoryId,
+    DateTime? prefillStartDate,
   }) {
-    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final nameCtrl = TextEditingController(
+      text: existing?.name ?? prefillName ?? '',
+    );
     final amountCtrl = TextEditingController(
       text: existing != null
           ? (existing.amountCents / 100).toStringAsFixed(2)
+          : prefillAmountCents != null
+          ? (prefillAmountCents / 100).toStringAsFixed(2)
           : '',
     );
-    int? selectedCategoryId = existing?.categoryId;
+    int? selectedCategoryId = existing?.categoryId ?? prefillCategoryId;
+    int? selectedParentCategoryId;
     RecurringInterval selectedInterval =
         existing?.interval ?? RecurringInterval.monthly;
-    DateTime selectedStartDate = existing?.startDate ?? DateTime.now();
+    DateTime selectedStartDate =
+        existing?.startDate ?? prefillStartDate ?? DateTime.now();
     bool isActive = existing?.isActive ?? true;
     final l10n = AppLocalizations.of(context);
 
@@ -166,13 +231,24 @@ class RecurringExpensesScreen extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        existing != null
-                            ? (l10n?.editRecurring ??
-                                  'Wiederkehrende Ausgabe bearbeiten')
-                            : (l10n?.addRecurring ??
-                                  'Wiederkehrende Ausgabe hinzufügen'),
-                        style: Theme.of(ctx).textTheme.titleMedium,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              existing != null
+                                  ? (l10n?.editRecurring ??
+                                        'Wiederkehrende Ausgabe bearbeiten')
+                                  : (l10n?.addRecurring ??
+                                        'Wiederkehrende Ausgabe hinzufügen'),
+                              style: Theme.of(ctx).textTheme.titleMedium,
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            icon: const Icon(Icons.close),
+                            tooltip: l10n?.cancel ?? 'Schliessen',
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -197,21 +273,82 @@ class RecurringExpensesScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: parents.map((cat) {
-                          return ChoiceChip(
-                            label: Text(cat.name),
-                            selected: selectedCategoryId == cat.id,
-                            selectedColor: Color(
-                              cat.colorValue,
-                            ).withValues(alpha: 0.3),
-                            onSelected: (_) => setSheetState(
-                              () => selectedCategoryId = cat.id,
-                            ),
+                      Builder(
+                        builder: (_) {
+                          final selected = categories
+                              .where((c) => c.id == selectedCategoryId)
+                              .firstOrNull;
+                          final activeParentId =
+                              selectedParentCategoryId ?? selected?.parentId;
+                          final subcategories = activeParentId == null
+                              ? <CategoryEntity>[]
+                              : categories
+                                    .where((c) => c.parentId == activeParentId)
+                                    .toList();
+
+                          if (activeParentId != null &&
+                              subcategories.isNotEmpty) {
+                            final activeParent = categories
+                                .where((c) => c.id == activeParentId)
+                                .firstOrNull;
+                            return Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: [
+                                ChoiceChip(
+                                  label: Text(
+                                    '← ${activeParent?.name ?? 'Kategorie'}',
+                                  ),
+                                  selected: false,
+                                  onSelected: (_) => setSheetState(() {
+                                    selectedParentCategoryId = null;
+                                    selectedCategoryId = null;
+                                  }),
+                                ),
+                                ...subcategories.map((cat) {
+                                  return ChoiceChip(
+                                    label: Text(cat.name),
+                                    selected: selectedCategoryId == cat.id,
+                                    selectedColor: Color(
+                                      cat.colorValue,
+                                    ).withValues(alpha: 0.3),
+                                    onSelected: (_) => setSheetState(
+                                      () => selectedCategoryId = cat.id,
+                                    ),
+                                  );
+                                }),
+                              ],
+                            );
+                          }
+
+                          return Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: parents.map((cat) {
+                              return ChoiceChip(
+                                label: Text(cat.name),
+                                selected: selectedCategoryId == cat.id,
+                                selectedColor: Color(
+                                  cat.colorValue,
+                                ).withValues(alpha: 0.3),
+                                onSelected: (_) {
+                                  final hasChildren = categories.any(
+                                    (c) => c.parentId == cat.id,
+                                  );
+                                  setSheetState(() {
+                                    if (hasChildren) {
+                                      selectedParentCategoryId = cat.id;
+                                      selectedCategoryId = null;
+                                    } else {
+                                      selectedParentCategoryId = null;
+                                      selectedCategoryId = cat.id;
+                                    }
+                                  });
+                                },
+                              );
+                            }).toList(),
                           );
-                        }).toList(),
+                        },
                       ),
                       const SizedBox(height: 12),
                       SegmentedButton<RecurringInterval>(
@@ -260,6 +397,50 @@ class RecurringExpensesScreen extends ConsumerWidget {
                           value: isActive,
                           onChanged: (v) => setSheetState(() => isActive = v),
                         ),
+                      if (existing != null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: selectedCategoryId == null
+                                ? null
+                                : () async {
+                                    final cents = parseAmountToCents(
+                                      amountCtrl.text,
+                                    );
+                                    if (cents == null) return;
+                                    final now = DateTime.now();
+                                    await ref
+                                        .read(addExpenseProvider)
+                                        .call(
+                                          ExpenseEntity(
+                                            id: _uuid.v4(),
+                                            amountCents: cents,
+                                            description: nameCtrl.text.trim(),
+                                            categoryId: selectedCategoryId!,
+                                            date: now,
+                                            recurringExpenseId: existing.id,
+                                            createdAt: now,
+                                            updatedAt: now,
+                                          ),
+                                        );
+                                    ref.invalidate(expenseListProvider);
+                                    ref.invalidate(
+                                      currentMonthExpensesProvider,
+                                    );
+                                    if (ctx.mounted) {
+                                      ScaffoldMessenger.of(ctx).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Ausgabe sofort erzeugt',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            icon: const Icon(Icons.bolt),
+                            label: const Text('Sofort Ausgabe erzeugen'),
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
@@ -305,7 +486,12 @@ class RecurringExpensesScreen extends ConsumerWidget {
                             }
                             ref.invalidate(recurringExpenseListProvider);
                             ref.invalidate(committedAmountProvider);
-                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              if (widget.prefillName != null) {
+                                context.go('/recurring');
+                              }
+                            }
                           },
                           child: Text(l10n?.save ?? 'Speichern'),
                         ),
@@ -319,5 +505,14 @@ class RecurringExpensesScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  String _categoryPath(Map<int, CategoryEntity> catMap, int categoryId) {
+    final cat = catMap[categoryId];
+    if (cat == null) return '';
+    if (cat.parentId == null) return cat.name;
+    final parent = catMap[cat.parentId];
+    if (parent == null) return cat.name;
+    return '${parent.name} -> ${cat.name}';
   }
 }

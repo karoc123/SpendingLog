@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 
 import '../../../../core/providers/core_providers.dart';
+import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -15,13 +16,27 @@ class SettingsScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final locale = ref.watch(localeSettingProvider).value ?? 'de';
-    final biometrics =
-        ref.watch(biometricsEnabledProvider).value ?? false;
-    final themeMode =
-        ref.watch(themeModeSettingProvider).value ?? 'system';
+    final biometrics = ref.watch(biometricsEnabledProvider).value ?? false;
+    final themeMode = ref.watch(themeModeSettingProvider).value ?? 'system';
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n?.settings ?? 'Einstellungen')),
+      appBar: AppBar(
+        title: Text(l10n?.settings ?? 'Einstellungen'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showScreenHelp(
+              context,
+              deTitle: 'Hilfe: Einstellungen',
+              enTitle: 'Help: Settings',
+              deBody:
+                  'Hier passt du Sprache, Waehrung, Design und Sicherheit an. Ueber Daten kommst du zu Kategorien sowie Export/Import.',
+              enBody:
+                  'Configure language, currency, theme, and security here. Use Data to manage categories and export/import.',
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         children: [
           // -- Appearance section --

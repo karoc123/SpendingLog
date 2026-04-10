@@ -30,13 +30,23 @@ ThemeData buildLightTheme() {
 }
 
 ThemeData buildDarkTheme() {
-  final colorScheme = ColorScheme.fromSeed(
+  final base = ColorScheme.fromSeed(
     seedColor: _seedColor,
     brightness: Brightness.dark,
+  );
+  final colorScheme = base.copyWith(
+    surface: const Color(0xFF000000),
+    surfaceContainerLowest: const Color(0xFF000000),
+    surfaceContainerLow: const Color(0xFF111111),
+    surfaceContainer: const Color(0xFF161616),
+    surfaceContainerHigh: const Color(0xFF1B1B1B),
+    surfaceContainerHighest: const Color(0xFF202020),
   );
   return ThemeData(
     useMaterial3: true,
     colorScheme: colorScheme,
+    scaffoldBackgroundColor: const Color(0xFF000000),
+    canvasColor: const Color(0xFF000000),
     inputDecorationTheme: InputDecorationTheme(
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       filled: true,
@@ -50,8 +60,11 @@ ThemeData buildDarkTheme() {
     ),
     appBarTheme: AppBarTheme(
       centerTitle: true,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: const Color(0xFF000000),
       surfaceTintColor: Colors.transparent,
+    ),
+    navigationBarTheme: const NavigationBarThemeData(
+      backgroundColor: Color(0xFF000000),
     ),
   );
 }

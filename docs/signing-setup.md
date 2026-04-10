@@ -60,7 +60,17 @@ Go to **Settings → Secrets and variables → Actions → New repository secret
 
 Run the **Build APK** or **Release** workflow manually from the Actions tab. The signing step will decode the keystore and create `key.properties` at build time.
 
-## 4. Troubleshooting
+## 4. Release Notes
+
+- `build-apk.yml` builds a signed APK artifact.
+- `release.yml` builds both APK and AAB and uploads them to a GitHub Release.
+- If you change `app_icon.png`, regenerate icons before releasing:
+
+```bash
+dart run flutter_launcher_icons
+```
+
+## 5. Troubleshooting
 
 | Problem | Solution |
 | ------- | -------- |
@@ -69,7 +79,7 @@ Run the **Build APK** or **Release** workflow manually from the Actions tab. The
 | Wrong key alias | The alias must match the one used during `keytool -genkey`. Check with `keytool -list -keystore upload-keystore.jks`. |
 | APK is debug-signed | Check the CI log for the "Signing secrets not configured" notice. |
 
-## 5. Important Notes
+## 6. Important Notes
 
 - **Never commit** `upload-keystore.jks` or `key.properties` to version control.
 - Both files are listed in `.gitignore`.

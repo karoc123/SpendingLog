@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/icon_map.dart';
+import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
 import '../../domain/entities/expense_entity.dart';
@@ -67,7 +69,23 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n?.transactions ?? 'Transaktionen')),
+      appBar: AppBar(
+        title: Text(l10n?.transactions ?? 'Transaktionen'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showScreenHelp(
+              context,
+              deTitle: 'Hilfe: Transaktionen',
+              enTitle: 'Help: Transactions',
+              deBody:
+                  'Suche und filtere Transaktionen nach Zeitraum und Kategorie. Die Liste zeigt Monatswechsel und Summen.',
+              enBody:
+                  'Search and filter transactions by date and category. The list includes month separators and totals.',
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // Search bar
@@ -217,20 +235,57 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 return Column(
                   children: [
                     Expanded(
-                      child: ListView.separated(
+                      child: ListView.builder(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
                         itemBuilder: (context, index) {
                           final expense = filtered[index];
                           final category = categoryMap[expense.categoryId];
-                          return _ExpenseTile(
-                            expense: expense,
-                            category: category,
-                            currencySymbol: currencySymbol,
-                            dateFormat: dateFormat,
-                            onEdit: () => _showEditSheet(expense, categories),
-                            onDelete: () => _confirmDelete(expense),
+                          final previous = index > 0
+                              ? filtered[index - 1]
+                              : null;
+                          final showMonthHeader =
+                              previous == null ||
+                              previous.date.year != expense.date.year ||
+                              previous.date.month != expense.date.month;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (showMonthHeader)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    10,
+                                    16,
+                                    6,
+                                  ),
+                                  child: Text(
+                                    DateFormat.yMMMM(
+                                      Localizations.localeOf(
+                                        context,
+                                      ).toString(),
+                                    ).format(expense.date),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              _ExpenseTile(
+                                expense: expense,
+                                category: category,
+                                categoryPath: _categoryPath(
+                                  categoryMap,
+                                  expense.categoryId,
+                                ),
+                                currencySymbol: currencySymbol,
+                                dateFormat: dateFormat,
+                                onEdit: () =>
+                                    _showEditSheet(expense, categories),
+                                onDelete: () => _confirmDelete(expense),
+                              ),
+                              const Divider(height: 1),
+                            ],
                           );
                         },
                       ),
@@ -297,6 +352,15 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     }
 
     return result;
+  }
+
+  String _categoryPath(Map<int, CategoryEntity> categoryMap, int categoryId) {
+    final category = categoryMap[categoryId];
+    if (category == null) return '';
+    if (category.parentId == null) return category.name;
+    final parent = categoryMap[category.parentId];
+    if (parent == null) return category.name;
+    return '${parent.name} -> ${category.name}';
   }
 
   void _showEditSheet(ExpenseEntity expense, List<CategoryEntity> categories) {
@@ -368,6 +432,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 
                           if (activeParentId != null &&
                               subcategories.isNotEmpty) {
+                            final activeParent = categories
+                                .where((c) => c.id == activeParentId)
+                                .firstOrNull;
                             return ConstrainedBox(
                               constraints: const BoxConstraints(maxHeight: 96),
                               child: SingleChildScrollView(
@@ -376,7 +443,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                   runSpacing: 4,
                                   children: [
                                     ChoiceChip(
-                                      label: const Text('← Kategorie'),
+                                      label: Text(
+                                        '← ${activeParent?.name ?? 'Kategorie'}',
+                                      ),
                                       selected: false,
                                       onSelected: (_) => setSheetState(() {
                                         editParentCategoryId = null;
@@ -463,6 +532,32 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         controller: notesCtrl,
                         decoration: InputDecoration(
                           labelText: l10n?.notes ?? 'Notizen (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: IconButton.outlined(
+                          tooltip: 'Wiederkehrend erstellen',
+                          onPressed: () {
+                            final cents = parseAmountToCents(amountCtrl.text);
+                            if (cents == null) return;
+                            final uri = Uri(
+                              path: '/recurring',
+                              queryParameters: {
+                                'name': descCtrl.text.trim(),
+                                'amountCents': '$cents',
+                                if (editCategoryId != null)
+                                  'categoryId': '$editCategoryId',
+                                'startDate': editDate.toIso8601String(),
+                              },
+                            ).toString();
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                              context.push(uri);
+                            }
+                          },
+                          icon: const Icon(Icons.repeat),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -565,6 +660,7 @@ class _TotalFooter extends StatelessWidget {
 class _ExpenseTile extends StatelessWidget {
   final ExpenseEntity expense;
   final CategoryEntity? category;
+  final String categoryPath;
   final String currencySymbol;
   final DateFormat dateFormat;
   final VoidCallback onEdit;
@@ -573,6 +669,7 @@ class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({
     required this.expense,
     required this.category,
+    required this.categoryPath,
     required this.currencySymbol,
     required this.dateFormat,
     required this.onEdit,
@@ -596,9 +693,7 @@ class _ExpenseTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text(
-        '${category?.name ?? ''} · ${dateFormat.format(expense.date)}',
-      ),
+      subtitle: Text('$categoryPath · ${dateFormat.format(expense.date)}'),
       trailing: Text(
         formatAmount(expense.amountCents, symbol: currencySymbol),
         style: Theme.of(

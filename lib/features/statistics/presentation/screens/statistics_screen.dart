@@ -6,8 +6,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
+import '../../domain/usecases/get_spending_by_category.dart';
 import '../providers/statistics_providers.dart';
 import '../widgets/spending_chart.dart';
 
@@ -34,7 +36,23 @@ class StatisticsScreen extends ConsumerWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n?.statistics ?? 'Statistik')),
+      appBar: AppBar(
+        title: Text(l10n?.statistics ?? 'Statistik'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => showScreenHelp(
+              context,
+              deTitle: 'Hilfe: Statistik',
+              enTitle: 'Help: Statistics',
+              deBody:
+                  'Tippe im Kreisdiagramm auf eine Kategorie oder im Balkendiagramm auf einen Zeitraum, um gefilterte Transaktionen zu öffnen.',
+              enBody:
+                  'Tap pie chart categories or bar chart periods to open filtered transactions.',
+            ),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           // View mode toggle + date navigation.
@@ -128,36 +146,51 @@ class StatisticsScreen extends ConsumerWidget {
 
           const SizedBox(height: 8),
 
-          // Pie chart.
+          // Pie chart + legend.
           spendingAsync.when(
-            data: (spending) => SpendingChart(
-              spending: spending,
-              selectedCategoryId: selectedCategoryId,
-              onCategoryTap: (id) {
-                ref.read(selectedChartCategoryProvider.notifier).state = id;
-                if (id != null) {
-                  _openTransactions(
-                    context,
-                    start: start,
-                    end: end,
-                    categoryId: id,
-                  );
-                }
-              },
-            ),
+            data: (spending) {
+              final sorted = [...spending]
+                ..sort(
+                  (a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()),
+                );
+              return SizedBox(
+                height: 240,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SpendingChart(
+                        spending: sorted,
+                        selectedCategoryId: selectedCategoryId,
+                        onCategoryTap: (id) {
+                          ref
+                                  .read(selectedChartCategoryProvider.notifier)
+                                  .state =
+                              id;
+                          if (id != null) {
+                            _openTransactions(
+                              context,
+                              start: start,
+                              end: end,
+                              categoryId: id,
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: 180,
+                      child: _buildLegend(context, sorted, currencySymbol),
+                    ),
+                  ],
+                ),
+              );
+            },
             loading: () => const SizedBox(
-              height: 200,
+              height: 240,
               child: Center(child: CircularProgressIndicator()),
             ),
             error: (e, _) =>
-                SizedBox(height: 200, child: Center(child: Text('Error: $e'))),
-          ),
-
-          // Legend.
-          spendingAsync.when(
-            data: (spending) => _buildLegend(context, spending, currencySymbol),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+                SizedBox(height: 240, child: Center(child: Text('Error: $e'))),
           ),
 
           const Divider(height: 1),
@@ -206,34 +239,49 @@ class StatisticsScreen extends ConsumerWidget {
 
   Widget _buildLegend(
     BuildContext context,
-    List<dynamic> spending,
+    List<CategorySpending> spending,
     String currencySymbol,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 4,
-        children: spending.map((cs) {
+      padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
+      child: ListView.separated(
+        itemCount: spending.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 6),
+        itemBuilder: (context, index) {
+          final cs = spending[index];
           return Row(
-            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 12,
-                height: 12,
+                width: 10,
+                height: 10,
+                margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
                   color: Color(cs.colorValue),
                   shape: BoxShape.circle,
                 ),
               ),
-              const SizedBox(width: 4),
-              Text(
-                cs.categoryName,
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cs.categoryName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    Text(
+                      formatAmount(cs.totalCents.abs(), symbol: currencySymbol),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
               ),
             ],
           );
-        }).toList(),
+        },
       ),
     );
   }
