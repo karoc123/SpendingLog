@@ -24,7 +24,7 @@ class StatisticsScreen extends ConsumerWidget {
     final spendingAsync = ref.watch(spendingByCategoryProvider);
     final summaryAsync = ref.watch(spendingSummaryProvider);
     final selectedCategoryId = ref.watch(selectedChartCategoryProvider);
-    final currencySymbol = ref.watch(currencySymbolProvider).valueOrNull ?? '€';
+    final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final (start, end) = ref.watch(statsDateRangeProvider);
 
     return Scaffold(
@@ -246,7 +246,7 @@ class _FilteredExpenseList extends ConsumerWidget {
     );
 
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final categories = categoriesAsync.valueOrNull ?? [];
+    final categories = categoriesAsync.value ?? [];
     final catMap = {for (final c in categories) c.id: c};
 
     return expensesAsync.when(

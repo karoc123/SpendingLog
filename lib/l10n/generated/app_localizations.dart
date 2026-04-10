@@ -535,6 +535,30 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Farbe'**
   String get color;
+
+  /// No description provided for @searchTransactions.
+  ///
+  /// In de, this message translates to:
+  /// **'Suchen…'**
+  String get searchTransactions;
+
+  /// No description provided for @filterCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorie'**
+  String get filterCategory;
+
+  /// No description provided for @allCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'Alle'**
+  String get allCategories;
+
+  /// No description provided for @clearFilter.
+  ///
+  /// In de, this message translates to:
+  /// **'Filter zurücksetzen'**
+  String get clearFilter;
 }
 
 class _AppLocalizationsDelegate

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../domain/usecases/get_spending_by_category.dart';

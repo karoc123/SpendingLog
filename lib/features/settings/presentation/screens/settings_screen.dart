@@ -13,12 +13,12 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final currencySymbol = ref.watch(currencySymbolProvider).valueOrNull ?? '€';
-    final locale = ref.watch(localeSettingProvider).valueOrNull ?? 'de';
+    final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
+    final locale = ref.watch(localeSettingProvider).value ?? 'de';
     final biometrics =
-        ref.watch(biometricsEnabledProvider).valueOrNull ?? false;
+        ref.watch(biometricsEnabledProvider).value ?? false;
     final themeMode =
-        ref.watch(themeModeSettingProvider).valueOrNull ?? 'system';
+        ref.watch(themeModeSettingProvider).value ?? 'system';
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n?.settings ?? 'Einstellungen')),

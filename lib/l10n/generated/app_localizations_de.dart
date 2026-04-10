@@ -230,4 +230,16 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get color => 'Farbe';
+
+  @override
+  String get searchTransactions => 'Suchen…';
+
+  @override
+  String get filterCategory => 'Kategorie';
+
+  @override
+  String get allCategories => 'Alle';
+
+  @override
+  String get clearFilter => 'Filter zurücksetzen';
 }

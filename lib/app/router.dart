@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/expenses/presentation/screens/home_screen.dart';
+import '../features/expenses/presentation/screens/transactions_screen.dart';
 import '../features/statistics/presentation/screens/statistics_screen.dart';
 import '../features/recurring/presentation/screens/recurring_expenses_screen.dart';
 import '../features/settings/presentation/screens/settings_screen.dart';
@@ -24,6 +25,14 @@ final appRouter = GoRouter(
             GoRoute(
               path: '/home',
               builder: (context, state) => const HomeScreen(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: '/transactions',
+              builder: (context, state) => const TransactionsScreen(),
             ),
           ],
         ),
@@ -90,6 +99,11 @@ class ScaffoldWithNavBar extends StatelessWidget {
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long),
+            label: 'Transaktionen',
           ),
           NavigationDestination(
             icon: Icon(Icons.pie_chart_outline),

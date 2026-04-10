@@ -15,14 +15,14 @@ class SpendingLogApp extends ConsumerWidget {
     final themeAsync = ref.watch(themeModeSettingProvider);
     final localeAsync = ref.watch(localeSettingProvider);
 
-    final themeModeStr = themeAsync.valueOrNull ?? 'system';
+    final themeModeStr = themeAsync.value ?? 'system';
     final themeMode = switch (themeModeStr) {
       'light' => ThemeMode.light,
       'dark' => ThemeMode.dark,
       _ => ThemeMode.system,
     };
 
-    final localeStr = localeAsync.valueOrNull ?? 'de';
+    final localeStr = localeAsync.value ?? 'de';
     final locale = Locale(localeStr);
 
     return MaterialApp.router(

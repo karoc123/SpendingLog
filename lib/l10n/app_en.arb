@@ -79,5 +79,10 @@
   "editCategory": "Edit category",
   "addSubcategory": "Add subcategory",
   "icon": "Icon",
-  "color": "Color"
+  "color": "Color",
+
+  "searchTransactions": "Search…",
+  "filterCategory": "Category",
+  "allCategories": "All",
+  "clearFilter": "Clear filter"
 }

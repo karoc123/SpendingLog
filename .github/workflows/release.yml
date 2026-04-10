@@ -1,13 +1,18 @@
-name: Build APK
+name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. 1.2.0)"
+        required: true
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-apk:
+  release:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,9 +31,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # Writes android/app/upload-keystore.jks and android/key.properties when
-      # all four signing secrets are present. Skips silently otherwise and lets
-      # Gradle fall back to debug signing.
+      - name: Static analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests
+        run: flutter test
+
       - name: Setup release signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -37,36 +45,38 @@ jobs:
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$STORE_PASSWORD" ]; then
-            echo "::notice::Signing secrets not configured — APK will be debug-signed (not suitable for production upgrades)"
-            exit 0
+            echo "::error::All four signing secrets must be configured for release builds"
+            exit 1
           fi
-
-          # Strip all whitespace before decoding to tolerate copy/paste artefacts.
           printf '%s' "$ANDROID_KEYSTORE_BASE64" \
             | tr -d '[:space:]' \
             | base64 -d > android/app/upload-keystore.jks
-
-          BYTES=$(wc -c < android/app/upload-keystore.jks)
-          echo "::notice::Keystore decoded successfully (${BYTES} bytes)"
-
-          # storeFile is resolved by Gradle relative to the module dir (android/app/).
-          # The keystore lives at android/app/upload-keystore.jks, so the value is
-          # just 'upload-keystore.jks' — no subdirectory prefix.
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
             > android/key.properties
 
-          echo "::notice::android/key.properties written"
-
-      - name: Build APK
+      - name: Build release APK
         run: |
           flutter build apk \
             --release \
             --no-tree-shake-icons \
             --build-number ${{ github.run_number }} \
-            --build-name "1.0.${{ github.run_number }}"
+            --build-name "${{ inputs.version }}"
 
-      - uses: actions/upload-artifact@v7
+      - name: Build release AAB
+        run: |
+          flutter build appbundle \
+            --release \
+            --no-tree-shake-icons \
+            --build-number ${{ github.run_number }} \
+            --build-name "${{ inputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: app-release-${{ github.run_number }}
-          path: build/app/outputs/flutter-apk/app-release.apk
+          tag_name: "v${{ inputs.version }}"
+          name: "SpendingLog v${{ inputs.version }}"
+          generate_release_notes: true
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab

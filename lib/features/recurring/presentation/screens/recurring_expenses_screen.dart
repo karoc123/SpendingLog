@@ -28,8 +28,8 @@ class RecurringExpensesScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final recurringAsync = ref.watch(recurringExpenseListProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final currencySymbol = ref.watch(currencySymbolProvider).valueOrNull ?? '€';
-    final categories = categoriesAsync.valueOrNull ?? [];
+    final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
+    final categories = categoriesAsync.value ?? [];
     final catMap = {for (final c in categories) c.id: c};
 
     return Scaffold(
@@ -188,7 +188,7 @@ class RecurringExpensesScreen extends ConsumerWidget {
                       decoration: InputDecoration(
                         labelText: l10n?.amount ?? 'Betrag',
                         prefixText:
-                            '${ref.read(currencySymbolProvider).valueOrNull ?? '€'} ',
+                            '${ref.read(currencySymbolProvider).value ?? '€'} ',
                       ),
                     ),
                     const SizedBox(height: 12),

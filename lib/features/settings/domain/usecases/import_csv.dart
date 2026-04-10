@@ -21,8 +21,47 @@ class ImportCsv {
 
   ImportCsv(this._expenseRepository, this._categoryRepository);
 
+  /// Normalises an amount string that may use German number formatting
+  /// (`1.234,56`) or standard formatting (`1234.56`) into a value that
+  /// [double.tryParse] understands.
+  static double? _parseAmount(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return null;
+
+    final hasComma = s.contains(',');
+    final hasDot = s.contains('.');
+
+    if (hasComma && hasDot) {
+      // Determine which is the decimal separator (it comes last).
+      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+        // German: 1.234,56 → remove dots (thousands), comma → dot.
+        s = s.replaceAll('.', '').replaceAll(',', '.');
+      } else {
+        // English: 1,234.56 → remove commas (thousands).
+        s = s.replaceAll(',', '');
+      }
+    } else if (hasComma) {
+      // Only comma → treat as decimal separator.
+      s = s.replaceAll(',', '.');
+    }
+    // Only dot or no separator → already fine for double.tryParse.
+
+    return double.tryParse(s);
+  }
+
   Future<int> call(String csvContent) async {
-    final rows = const CsvToListConverter(eol: '\n').convert(csvContent.trim());
+    final trimmed = csvContent.trim();
+    if (trimmed.isEmpty) return 0;
+
+    // Auto-detect field separator: if the header line contains ';' it is
+    // likely a German-locale CSV export.
+    final firstLine = trimmed.split('\n').first;
+    final separator = firstLine.contains(';') ? ';' : ',';
+
+    final rows = CsvDecoder(
+      fieldDelimiter: separator,
+      dynamicTyping: false,
+    ).convert(trimmed);
     if (rows.isEmpty) return 0;
 
     // First row is header — skip it.
@@ -40,8 +79,7 @@ class ImportCsv {
     for (final row in dataRows) {
       if (row.length < 8) continue;
 
-      final amountStr = row[1].toString();
-      final amount = double.tryParse(amountStr);
+      final amount = _parseAmount(row[1].toString());
       if (amount == null) continue;
 
       // Convert to positive cents (CSV amounts may be negative for expenses).

@@ -174,7 +174,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final categoriesAsync = ref.watch(allCategoriesProvider);
     final expensesAsync = ref.watch(currentMonthExpensesProvider);
     final committedAsync = ref.watch(committedAmountProvider);
-    final currencySymbol = ref.watch(currencySymbolProvider).valueOrNull ?? '€';
+    final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -326,7 +326,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     return _ExpenseListTile(
                       expense: expense,
                       currencySymbol: currencySymbol,
-                      categories: categoriesAsync.valueOrNull ?? [],
+                      categories: categoriesAsync.value ?? [],
                       onDismissed: () async {
                         await ref.read(deleteExpenseProvider).call(expense.id);
                         ref.invalidate(expenseListProvider);
@@ -350,7 +350,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     AsyncValue<List<CategoryEntity>> categoriesAsync,
     String currencySymbol,
   ) {
-    final categories = categoriesAsync.valueOrNull ?? [];
+    final categories = categoriesAsync.value ?? [];
     final catMap = {for (final c in categories) c.id: c};
 
     return Container(
@@ -389,19 +389,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Show parent categories first, then subcategories.
     final parents = categories.where((c) => c.parentId == null).toList();
 
-    return Wrap(
-      spacing: 6,
-      runSpacing: 4,
-      children: parents.map((cat) {
-        final isSelected = _selectedCategoryId == cat.id;
-        return ChoiceChip(
-          label: Text(cat.name),
-          avatar: Icon(iconFromName(cat.iconName), size: 18),
-          selected: isSelected,
-          selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
-          onSelected: (_) => setState(() => _selectedCategoryId = cat.id),
-        );
-      }).toList(),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 96),
+      child: SingleChildScrollView(
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: parents.map((cat) {
+            final isSelected = _selectedCategoryId == cat.id;
+            return ChoiceChip(
+              label: Text(cat.name),
+              avatar: Icon(iconFromName(cat.iconName), size: 18),
+              selected: isSelected,
+              selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
+              onSelected: (_) => setState(() => _selectedCategoryId = cat.id),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
@@ -423,7 +428,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           builder: (ctx, setSheetState) {
             final categoriesAsync = ref.watch(allCategoriesProvider);
             final currencySymbol =
-                ref.watch(currencySymbolProvider).valueOrNull ?? '€';
+                ref.watch(currencySymbolProvider).value ?? '€';
             return Padding(
               padding: EdgeInsets.only(
                 left: 16,
@@ -463,20 +468,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         final parents = categories
                             .where((c) => c.parentId == null)
                             .toList();
-                        return Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: parents.map((cat) {
-                            return ChoiceChip(
-                              label: Text(cat.name),
-                              selected: editCategoryId == cat.id,
-                              selectedColor: Color(
-                                cat.colorValue,
-                              ).withValues(alpha: 0.3),
-                              onSelected: (_) =>
-                                  setSheetState(() => editCategoryId = cat.id),
-                            );
-                          }).toList(),
+                        return ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 96),
+                          child: SingleChildScrollView(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: parents.map((cat) {
+                                return ChoiceChip(
+                                  label: Text(cat.name),
+                                  selected: editCategoryId == cat.id,
+                                  selectedColor: Color(
+                                    cat.colorValue,
+                                  ).withValues(alpha: 0.3),
+                                  onSelected: (_) => setSheetState(
+                                    () => editCategoryId = cat.id,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
                         );
                       },
                       loading: () => const CircularProgressIndicator(),

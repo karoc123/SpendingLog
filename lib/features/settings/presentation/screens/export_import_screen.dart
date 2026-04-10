@@ -179,7 +179,7 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
   Future<void> _importCsv() async {
     setState(() => _loading = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
       );

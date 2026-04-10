@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
+
+import 'connection/native.dart'
+    if (dart.library.js_interop) 'connection/web.dart';
 
 part 'app_database.g.dart';
 
@@ -74,10 +71,10 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   /// Named constructor that opens the default on-disk database.
-  factory AppDatabase.defaults() => AppDatabase(_openConnection());
+  factory AppDatabase.defaults() => AppDatabase(connect());
 
   /// In-memory constructor for tests.
-  factory AppDatabase.memory() => AppDatabase(NativeDatabase.memory());
+  factory AppDatabase.memory() => AppDatabase(connectInMemory());
 
   @override
   int get schemaVersion => 1;
@@ -391,23 +388,5 @@ class CategorySpendingRow {
     required this.iconName,
     required this.totalCents,
     required this.transactionCount,
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Database opener
-// ---------------------------------------------------------------------------
-
-LazyDatabase _openConnection() {
-  return LazyDatabase(() async {
-    if (kIsWeb) {
-      // On web, use an in-memory database (drift doesn't support
-      // persistent web storage with NativeDatabase).
-      // For production web, consider using drift's WasmDatabase.
-      return NativeDatabase.memory();
-    }
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dir.path, 'spending_log.sqlite'));
-    return NativeDatabase.createInBackground(file);
   });
 }

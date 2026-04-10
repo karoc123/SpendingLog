@@ -43,6 +43,6 @@ class ExportCsv {
       ]);
     }
 
-    return const ListToCsvConverter().convert(rows);
+    return const CsvEncoder().convert(rows);
   }
 }

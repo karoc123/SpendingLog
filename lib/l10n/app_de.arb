@@ -79,5 +79,10 @@
   "editCategory": "Kategorie bearbeiten",
   "addSubcategory": "Unterkategorie hinzufügen",
   "icon": "Symbol",
-  "color": "Farbe"
+  "color": "Farbe",
+
+  "searchTransactions": "Suchen…",
+  "filterCategory": "Kategorie",
+  "allCategories": "Alle",
+  "clearFilter": "Filter zurücksetzen"
 }
