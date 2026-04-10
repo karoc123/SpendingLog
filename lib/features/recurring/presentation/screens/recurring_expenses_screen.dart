@@ -64,7 +64,7 @@ class RecurringExpensesScreen extends ConsumerWidget {
                 ),
                 title: Text(item.name),
                 subtitle: Text(
-                  '${cat?.name ?? ''} · ${item.interval == RecurringInterval.monthly ? (l10n?.monthly ?? 'Monatlich') : (l10n?.yearly ?? 'Jährlich')}',
+                  '${cat?.name ?? ''} · ${item.interval == RecurringInterval.monthly ? (l10n?.monthly ?? 'Monatlich') : (l10n?.yearly ?? 'Jährlich')} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}',
                 ),
                 trailing: Text(
                   formatAmount(item.amountCents, symbol: currencySymbol),
@@ -144,165 +144,174 @@ class RecurringExpensesScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final parents = categories
                 .where((c) => c.parentId == null)
                 .toList();
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      existing != null
-                          ? (l10n?.editRecurring ??
-                                'Wiederkehrende Ausgabe bearbeiten')
-                          : (l10n?.addRecurring ??
-                                'Wiederkehrende Ausgabe hinzufügen'),
-                      style: Theme.of(ctx).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.name ?? 'Name',
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom:
+                      MediaQuery.of(ctx).viewInsets.bottom +
+                      MediaQuery.of(ctx).viewPadding.bottom +
+                      16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        existing != null
+                            ? (l10n?.editRecurring ??
+                                  'Wiederkehrende Ausgabe bearbeiten')
+                            : (l10n?.addRecurring ??
+                                  'Wiederkehrende Ausgabe hinzufügen'),
+                        style: Theme.of(ctx).textTheme.titleMedium,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: amountCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: l10n?.amount ?? 'Betrag',
-                        prefixText:
-                            '${ref.read(currencySymbolProvider).value ?? '€'} ',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: parents.map((cat) {
-                        return ChoiceChip(
-                          label: Text(cat.name),
-                          selected: selectedCategoryId == cat.id,
-                          selectedColor: Color(
-                            cat.colorValue,
-                          ).withValues(alpha: 0.3),
-                          onSelected: (_) =>
-                              setSheetState(() => selectedCategoryId = cat.id),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<RecurringInterval>(
-                      segments: [
-                        ButtonSegment(
-                          value: RecurringInterval.monthly,
-                          label: Text(l10n?.monthly ?? 'Monatlich'),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.name ?? 'Name',
                         ),
-                        ButtonSegment(
-                          value: RecurringInterval.yearly,
-                          label: Text(l10n?.yearly ?? 'Jährlich'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: amountCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
-                      ],
-                      selected: {selectedInterval},
-                      onSelectionChanged: (s) =>
-                          setSheetState(() => selectedInterval = s.first),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Text(l10n?.startDate ?? 'Startdatum:'),
-                        const SizedBox(width: 8),
-                        TextButton(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: ctx,
-                              initialDate: selectedStartDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime(2100),
-                            );
-                            if (picked != null) {
-                              setSheetState(() => selectedStartDate = picked);
-                            }
-                          },
-                          child: Text(
-                            DateFormat.yMd().format(selectedStartDate),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: l10n?.amount ?? 'Betrag',
+                          prefixText:
+                              '${ref.read(currencySymbolProvider).value ?? '€'} ',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: parents.map((cat) {
+                          return ChoiceChip(
+                            label: Text(cat.name),
+                            selected: selectedCategoryId == cat.id,
+                            selectedColor: Color(
+                              cat.colorValue,
+                            ).withValues(alpha: 0.3),
+                            onSelected: (_) => setSheetState(
+                              () => selectedCategoryId = cat.id,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<RecurringInterval>(
+                        segments: [
+                          ButtonSegment(
+                            value: RecurringInterval.monthly,
+                            label: Text(l10n?.monthly ?? 'Monatlich'),
                           ),
+                          ButtonSegment(
+                            value: RecurringInterval.yearly,
+                            label: Text(l10n?.yearly ?? 'Jährlich'),
+                          ),
+                        ],
+                        selected: {selectedInterval},
+                        onSelectionChanged: (s) =>
+                            setSheetState(() => selectedInterval = s.first),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Text(l10n?.startDate ?? 'Startdatum:'),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: ctx,
+                                initialDate: selectedStartDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (picked != null) {
+                                setSheetState(() => selectedStartDate = picked);
+                              }
+                            },
+                            child: Text(
+                              DateFormat.yMd(
+                                Localizations.localeOf(ctx).toString(),
+                              ).format(selectedStartDate),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (existing != null)
+                        SwitchListTile(
+                          title: Text(l10n?.active ?? 'Aktiv'),
+                          value: isActive,
+                          onChanged: (v) => setSheetState(() => isActive = v),
                         ),
-                      ],
-                    ),
-                    if (existing != null)
-                      SwitchListTile(
-                        title: Text(l10n?.active ?? 'Aktiv'),
-                        value: isActive,
-                        onChanged: (v) => setSheetState(() => isActive = v),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final name = nameCtrl.text.trim();
+                            final cents = parseAmountToCents(amountCtrl.text);
+                            if (name.isEmpty ||
+                                cents == null ||
+                                selectedCategoryId == null) {
+                              return;
+                            }
+                            final now = DateTime.now();
+                            if (existing != null) {
+                              await ref
+                                  .read(updateRecurringExpenseProvider)
+                                  .call(
+                                    existing.copyWith(
+                                      name: name,
+                                      amountCents: cents,
+                                      categoryId: selectedCategoryId,
+                                      interval: selectedInterval,
+                                      startDate: selectedStartDate,
+                                      isActive: isActive,
+                                      updatedAt: now,
+                                    ),
+                                  );
+                            } else {
+                              await ref
+                                  .read(addRecurringExpenseProvider)
+                                  .call(
+                                    RecurringExpenseEntity(
+                                      id: _uuid.v4(),
+                                      name: name,
+                                      amountCents: cents,
+                                      categoryId: selectedCategoryId!,
+                                      interval: selectedInterval,
+                                      startDate: selectedStartDate,
+                                      createdAt: now,
+                                      updatedAt: now,
+                                    ),
+                                  );
+                            }
+                            ref.invalidate(recurringExpenseListProvider);
+                            ref.invalidate(committedAmountProvider);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: Text(l10n?.save ?? 'Speichern'),
+                        ),
                       ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () async {
-                          final name = nameCtrl.text.trim();
-                          final cents = parseAmountToCents(amountCtrl.text);
-                          if (name.isEmpty ||
-                              cents == null ||
-                              selectedCategoryId == null) {
-                            return;
-                          }
-                          final now = DateTime.now();
-                          if (existing != null) {
-                            await ref
-                                .read(updateRecurringExpenseProvider)
-                                .call(
-                                  existing.copyWith(
-                                    name: name,
-                                    amountCents: cents,
-                                    categoryId: selectedCategoryId,
-                                    interval: selectedInterval,
-                                    startDate: selectedStartDate,
-                                    isActive: isActive,
-                                    updatedAt: now,
-                                  ),
-                                );
-                          } else {
-                            await ref
-                                .read(addRecurringExpenseProvider)
-                                .call(
-                                  RecurringExpenseEntity(
-                                    id: _uuid.v4(),
-                                    name: name,
-                                    amountCents: cents,
-                                    categoryId: selectedCategoryId!,
-                                    interval: selectedInterval,
-                                    startDate: selectedStartDate,
-                                    createdAt: now,
-                                    updatedAt: now,
-                                  ),
-                                );
-                          }
-                          ref.invalidate(recurringExpenseListProvider);
-                          ref.invalidate(committedAmountProvider);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                        },
-                        child: Text(l10n?.save ?? 'Speichern'),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );

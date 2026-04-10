@@ -1,14 +1,13 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/utils/icon_map.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
-
-import '../../../expenses/presentation/providers/expense_providers.dart';
 import '../providers/statistics_providers.dart';
 import '../widgets/spending_chart.dart';
 
@@ -26,6 +25,13 @@ class StatisticsScreen extends ConsumerWidget {
     final selectedCategoryId = ref.watch(selectedChartCategoryProvider);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final (start, end) = ref.watch(statsDateRangeProvider);
+    final filteredExpensesAsync = ref.watch(
+      filteredStatsExpensesProvider((
+        start: start,
+        end: end,
+        categoryId: selectedCategoryId,
+      )),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n?.statistics ?? 'Statistik')),
@@ -129,6 +135,14 @@ class StatisticsScreen extends ConsumerWidget {
               selectedCategoryId: selectedCategoryId,
               onCategoryTap: (id) {
                 ref.read(selectedChartCategoryProvider.notifier).state = id;
+                if (id != null) {
+                  _openTransactions(
+                    context,
+                    start: start,
+                    end: end,
+                    categoryId: id,
+                  );
+                }
               },
             ),
             loading: () => const SizedBox(
@@ -148,18 +162,46 @@ class StatisticsScreen extends ConsumerWidget {
 
           const Divider(height: 1),
 
-          // Filtered transaction list.
+          // Period bar chart (clickable drilldown).
           Expanded(
-            child: _FilteredExpenseList(
-              start: start,
-              end: end,
-              selectedCategoryId: selectedCategoryId,
-              currencySymbol: currencySymbol,
+            child: filteredExpensesAsync.when(
+              data: (expenses) => _SpendingBarChart(
+                viewMode: viewMode,
+                currentDate: currentDate,
+                expenses: expenses,
+                onBucketTap: (bucket) {
+                  _openTransactions(
+                    context,
+                    start: bucket.start,
+                    end: bucket.end,
+                    categoryId: selectedCategoryId,
+                  );
+                },
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('$e')),
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _openTransactions(
+    BuildContext context, {
+    required DateTime start,
+    required DateTime end,
+    int? categoryId,
+  }) {
+    final location = Uri(
+      path: '/transactions',
+      queryParameters: {
+        'start': start.toIso8601String(),
+        'end': end.toIso8601String(),
+        if (categoryId != null) 'categoryId': '$categoryId',
+      },
+    ).toString();
+    context.push(location);
   }
 
   Widget _buildLegend(
@@ -220,76 +262,189 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _FilteredExpenseList extends ConsumerWidget {
+class _BarBucket {
   final DateTime start;
   final DateTime end;
-  final int? selectedCategoryId;
-  final String currencySymbol;
+  final int totalCents;
+  final String label;
 
-  const _FilteredExpenseList({
+  const _BarBucket({
     required this.start,
     required this.end,
-    required this.selectedCategoryId,
-    required this.currencySymbol,
+    required this.totalCents,
+    required this.label,
+  });
+}
+
+class _SpendingBarChart extends StatelessWidget {
+  final StatsViewMode viewMode;
+  final DateTime currentDate;
+  final List<ExpenseEntity> expenses;
+  final ValueChanged<_BarBucket> onBucketTap;
+
+  const _SpendingBarChart({
+    required this.viewMode,
+    required this.currentDate,
+    required this.expenses,
+    required this.onBucketTap,
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final expensesAsync = ref.watch(
-      FutureProvider<List<ExpenseEntity>>((ref) async {
-        final getExpenses = ref.watch(getExpensesProvider);
-        if (selectedCategoryId != null) {
-          return getExpenses.byCategory(selectedCategoryId!, start, end);
-        }
-        return getExpenses.inRange(start, end);
-      }),
-    );
+  Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toString();
+    final buckets = _buildBuckets(locale);
+    final maxY = buckets
+        .map((b) => b.totalCents.abs().toDouble())
+        .fold<double>(0, (max, v) => v > max ? v : max);
 
-    final categoriesAsync = ref.watch(allCategoriesProvider);
-    final categories = categoriesAsync.value ?? [];
-    final catMap = {for (final c in categories) c.id: c};
+    if (buckets.every((b) => b.totalCents == 0)) {
+      return Center(
+        child: Text(
+          AppLocalizations.of(context)?.noExpenses ?? 'Keine Ausgaben',
+        ),
+      );
+    }
 
-    return expensesAsync.when(
-      data: (expenses) {
-        if (expenses.isEmpty) {
-          return Center(
-            child: Text(
-              AppLocalizations.of(context)?.noExpenses ?? 'Keine Ausgaben',
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            viewMode == StatsViewMode.monthly
+                ? 'Tagesverlauf'
+                : 'Monatsverlauf',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxY == 0 ? 1 : maxY * 1.2,
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchCallback: (event, response) {
+                    if (!event.isInterestedForInteractions ||
+                        response == null) {
+                      return;
+                    }
+                    final spot = response.spot;
+                    if (spot == null) return;
+                    final index = spot.touchedBarGroupIndex;
+                    if (index < 0 || index >= buckets.length) return;
+                    onBucketTap(buckets[index]);
+                  },
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  leftTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 26,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= buckets.length) {
+                          return const SizedBox.shrink();
+                        }
+                        final shouldShow = viewMode == StatsViewMode.monthly
+                            ? i % 5 == 0
+                            : true;
+                        if (!shouldShow) return const SizedBox.shrink();
+                        return SideTitleWidget(
+                          meta: meta,
+                          child: Text(
+                            buckets[i].label,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                barGroups: [
+                  for (var i = 0; i < buckets.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: buckets[i].totalCents.abs().toDouble(),
+                          width: viewMode == StatsViewMode.monthly ? 6 : 12,
+                          borderRadius: BorderRadius.circular(4),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
-          );
-        }
-        return ListView.builder(
-          itemCount: expenses.length,
-          itemBuilder: (context, index) {
-            final e = expenses[index];
-            final cat = catMap[e.categoryId];
-            return ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Color(
-                  cat?.colorValue ?? 0xFF9E9E9E,
-                ).withValues(alpha: 0.2),
-                child: e.isRecurring
-                    ? const Icon(Icons.repeat, size: 18)
-                    : Icon(iconFromName(cat?.iconName ?? 'category'), size: 18),
-              ),
-              title: Text(e.description),
-              subtitle: Text(
-                DateFormat.yMMMd(
-                  Localizations.localeOf(context).toString(),
-                ).format(e.date),
-              ),
-              trailing: Text(
-                formatAmount(e.amountCents, symbol: currencySymbol),
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('$e')),
+          ),
+        ],
+      ),
     );
+  }
+
+  List<_BarBucket> _buildBuckets(String locale) {
+    if (viewMode == StatsViewMode.yearly) {
+      return [
+        for (var month = 1; month <= 12; month++)
+          (() {
+            final start = DateTime(currentDate.year, month, 1);
+            final end = DateTime(currentDate.year, month + 1, 0, 23, 59, 59);
+            final total = expenses
+                .where(
+                  (e) =>
+                      e.date.year == currentDate.year && e.date.month == month,
+                )
+                .fold<int>(0, (sum, e) => sum + e.amountCents);
+            return _BarBucket(
+              start: start,
+              end: end,
+              totalCents: total,
+              label: DateFormat.MMM(locale).format(start),
+            );
+          })(),
+      ];
+    }
+
+    final days = DateTime(currentDate.year, currentDate.month + 1, 0).day;
+    return [
+      for (var day = 1; day <= days; day++)
+        (() {
+          final start = DateTime(currentDate.year, currentDate.month, day);
+          final end = DateTime(
+            currentDate.year,
+            currentDate.month,
+            day,
+            23,
+            59,
+            59,
+          );
+          final total = expenses
+              .where(
+                (e) =>
+                    e.date.year == currentDate.year &&
+                    e.date.month == currentDate.month &&
+                    e.date.day == day,
+              )
+              .fold<int>(0, (sum, e) => sum + e.amountCents);
+          return _BarBucket(
+            start: start,
+            end: end,
+            totalCents: total,
+            label: '$day',
+          );
+        })(),
+    ];
   }
 }

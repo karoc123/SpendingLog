@@ -173,4 +173,51 @@ void main() {
     expect(result, 3);
     verify(() => mockExpenseRepository.addExpense(any())).called(3);
   });
+
+  test(
+    'should map same subcategory name under different parents correctly',
+    () async {
+      final csv =
+          'ID,Amount,Date,Title,Note,Account,Currency,Category,Subcategory\n'
+          '1,-15.00,2026-01-15,Food item,,Cash,EUR,Food,General\n'
+          '2,-120.00,2026-01-16,Housing item,,Cash,EUR,Housing,General\n';
+
+      final food = makeCategory(id: 1, name: 'Food');
+      final housing = makeCategory(id: 2, name: 'Housing');
+
+      when(
+        () => mockCategoryRepository.getAllCategories(),
+      ).thenAnswer((_) async => [food, housing]);
+      when(() => mockCategoryRepository.addCategory(any())).thenAnswer((
+        inv,
+      ) async {
+        final category = inv.positionalArguments.first as CategoryEntity;
+        return category.parentId == 1 ? 101 : 202;
+      });
+      when(
+        () => mockExpenseRepository.addExpense(any()),
+      ).thenAnswer((_) async {});
+
+      final result = await useCase(csv);
+
+      expect(result, 2);
+
+      final createdSubcategories = verify(
+        () => mockCategoryRepository.addCategory(captureAny()),
+      ).captured.cast<CategoryEntity>();
+
+      expect(createdSubcategories.length, 2);
+      expect(createdSubcategories[0].name, 'General');
+      expect(createdSubcategories[0].parentId, 1);
+      expect(createdSubcategories[1].name, 'General');
+      expect(createdSubcategories[1].parentId, 2);
+
+      final importedExpenses = verify(
+        () => mockExpenseRepository.addExpense(captureAny()),
+      ).captured.cast<ExpenseEntity>();
+      expect(importedExpenses.length, 2);
+      expect(importedExpenses[0].categoryId, 101);
+      expect(importedExpenses[1].categoryId, 202);
+    },
+  );
 }

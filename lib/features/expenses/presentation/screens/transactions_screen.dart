@@ -11,7 +11,18 @@ import '../../domain/entities/expense_entity.dart';
 import '../providers/expense_providers.dart';
 
 class TransactionsScreen extends ConsumerStatefulWidget {
-  const TransactionsScreen({super.key});
+  final int? initialCategoryId;
+  final DateTime? initialStart;
+  final DateTime? initialEnd;
+  final String? initialSearchQuery;
+
+  const TransactionsScreen({
+    super.key,
+    this.initialCategoryId,
+    this.initialStart,
+    this.initialEnd,
+    this.initialSearchQuery,
+  });
 
   @override
   ConsumerState<TransactionsScreen> createState() => _TransactionsScreenState();
@@ -24,6 +35,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   DateTimeRange? _dateRange;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedCategoryId = widget.initialCategoryId;
+    if (widget.initialStart != null && widget.initialEnd != null) {
+      _dateRange = DateTimeRange(
+        start: widget.initialStart!,
+        end: widget.initialEnd!,
+      );
+    }
+    if ((widget.initialSearchQuery ?? '').trim().isNotEmpty) {
+      _searchQuery = widget.initialSearchQuery!.trim();
+      _searchController.text = _searchQuery;
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
@@ -34,7 +61,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final l10n = AppLocalizations.of(context);
     final expensesAsync = ref.watch(expenseListProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final dateFormat = DateFormat.yMMMd('de_DE');
+    final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
+    final dateFormat = DateFormat.yMMMd(
+      Localizations.localeOf(context).toString(),
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n?.transactions ?? 'Transaktionen')),
@@ -163,28 +193,53 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 final categoryMap = {for (final c in categories) c.id: c};
 
                 final filtered = _applyFilters(expenses, categoryMap);
+                final totalCents = filtered.fold<int>(
+                  0,
+                  (sum, expense) => sum + expense.amountCents,
+                );
 
                 if (filtered.isEmpty) {
-                  return Center(
-                    child: Text(l10n?.noExpenses ?? 'Keine Ausgaben'),
+                  return Column(
+                    children: [
+                      Expanded(
+                        child: Center(
+                          child: Text(l10n?.noExpenses ?? 'Keine Ausgaben'),
+                        ),
+                      ),
+                      _TotalFooter(
+                        totalCents: 0,
+                        currencySymbol: currencySymbol,
+                      ),
+                    ],
                   );
                 }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final expense = filtered[index];
-                    final category = categoryMap[expense.categoryId];
-                    return _ExpenseTile(
-                      expense: expense,
-                      category: category,
-                      dateFormat: dateFormat,
-                      onEdit: () => _showEditSheet(expense, categories),
-                      onDelete: () => _confirmDelete(expense),
-                    );
-                  },
+                return Column(
+                  children: [
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        itemBuilder: (context, index) {
+                          final expense = filtered[index];
+                          final category = categoryMap[expense.categoryId];
+                          return _ExpenseTile(
+                            expense: expense,
+                            category: category,
+                            currencySymbol: currencySymbol,
+                            dateFormat: dateFormat,
+                            onEdit: () => _showEditSheet(expense, categories),
+                            onDelete: () => _confirmDelete(expense),
+                          );
+                        },
+                      ),
+                    ),
+                    _TotalFooter(
+                      totalCents: totalCents,
+                      currencySymbol: currencySymbol,
+                    ),
+                  ],
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -228,8 +283,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     // Date range filter
     if (_dateRange != null) {
       final start = _dateRange!.start;
-      final end = _dateRange!.end.add(
-        const Duration(hours: 23, minutes: 59, seconds: 59),
+      final end = DateTime(
+        _dateRange!.end.year,
+        _dateRange!.end.month,
+        _dateRange!.end.day,
+        23,
+        59,
+        59,
       );
       result = result
           .where((e) => !e.date.isBefore(start) && !e.date.isAfter(end))
@@ -245,122 +305,193 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
     final descCtrl = TextEditingController(text: expense.description);
     final notesCtrl = TextEditingController(text: expense.notes ?? '');
-    var editCategoryId = expense.categoryId;
+    int? editCategoryId = expense.categoryId;
+    int? editParentCategoryId;
     var editDate = expense.date;
     final l10n = AppLocalizations.of(context);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n?.editExpense ?? 'Ausgabe bearbeiten',
-                      style: Theme.of(ctx).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: amountCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  16,
+                  16,
+                  MediaQuery.of(ctx).viewInsets.bottom +
+                      MediaQuery.of(ctx).viewPadding.bottom +
+                      16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n?.editExpense ?? 'Ausgabe bearbeiten',
+                        style: Theme.of(ctx).textTheme.titleMedium,
                       ),
-                      decoration: InputDecoration(
-                        labelText: l10n?.amount ?? 'Betrag',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: descCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.description ?? 'Beschreibung',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 96),
-                      child: SingleChildScrollView(
-                        child: Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: categories
-                              .where((c) => c.parentId == null)
-                              .map((cat) {
-                                return ChoiceChip(
-                                  label: Text(cat.name),
-                                  selected: editCategoryId == cat.id,
-                                  selectedColor: Color(
-                                    cat.colorValue,
-                                  ).withValues(alpha: 0.3),
-                                  onSelected: (_) => setSheetState(
-                                    () => editCategoryId = cat.id,
-                                  ),
-                                );
-                              })
-                              .toList(),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: amountCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: l10n?.amount ?? 'Betrag',
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(DateFormat.yMMMd('de_DE').format(editDate)),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: editDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                        );
-                        if (picked != null) {
-                          setSheetState(() => editDate = picked);
-                        }
-                      },
-                    ),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.notes ?? 'Notizen (optional)',
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: descCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.description ?? 'Beschreibung',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () {
-                          final cents = parseAmountToCents(amountCtrl.text);
-                          if (cents == null || descCtrl.text.trim().isEmpty) {
-                            return;
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (_) {
+                          final selected = categories
+                              .where((c) => c.id == editCategoryId)
+                              .firstOrNull;
+                          final activeParentId =
+                              editParentCategoryId ?? selected?.parentId;
+                          final subcategories = activeParentId == null
+                              ? <CategoryEntity>[]
+                              : categories
+                                    .where((c) => c.parentId == activeParentId)
+                                    .toList();
+
+                          if (activeParentId != null &&
+                              subcategories.isNotEmpty) {
+                            return ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 96),
+                              child: SingleChildScrollView(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('← Kategorie'),
+                                      selected: false,
+                                      onSelected: (_) => setSheetState(() {
+                                        editParentCategoryId = null;
+                                        editCategoryId = null;
+                                      }),
+                                    ),
+                                    ...subcategories.map((cat) {
+                                      return ChoiceChip(
+                                        label: Text(cat.name),
+                                        selected: editCategoryId == cat.id,
+                                        selectedColor: Color(
+                                          cat.colorValue,
+                                        ).withValues(alpha: 0.3),
+                                        onSelected: (_) => setSheetState(
+                                          () => editCategoryId = cat.id,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            );
                           }
-                          final updated = expense.copyWith(
-                            amountCents: cents,
-                            description: descCtrl.text.trim(),
-                            categoryId: editCategoryId,
-                            date: editDate,
-                            notes: () => notesCtrl.text.trim().isNotEmpty
-                                ? notesCtrl.text.trim()
-                                : null,
-                            updatedAt: DateTime.now(),
+
+                          final parents = categories
+                              .where((c) => c.parentId == null)
+                              .toList();
+                          return ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 96),
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: parents.map((cat) {
+                                  return ChoiceChip(
+                                    label: Text(cat.name),
+                                    selected: editCategoryId == cat.id,
+                                    selectedColor: Color(
+                                      cat.colorValue,
+                                    ).withValues(alpha: 0.3),
+                                    onSelected: (_) {
+                                      final hasChildren = categories.any(
+                                        (c) => c.parentId == cat.id,
+                                      );
+                                      setSheetState(() {
+                                        if (hasChildren) {
+                                          editParentCategoryId = cat.id;
+                                          editCategoryId = null;
+                                        } else {
+                                          editParentCategoryId = null;
+                                          editCategoryId = cat.id;
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                           );
-                          ref.read(updateExpenseProvider).call(updated);
-                          Navigator.pop(ctx);
                         },
-                        child: Text(l10n?.save ?? 'Speichern'),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          DateFormat.yMMMd(
+                            Localizations.localeOf(ctx).toString(),
+                          ).format(editDate),
+                        ),
+                        trailing: const Icon(Icons.calendar_today),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: editDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime.now(),
+                          );
+                          if (picked != null) {
+                            setSheetState(() => editDate = picked);
+                          }
+                        },
+                      ),
+                      TextField(
+                        controller: notesCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.notes ?? 'Notizen (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            final cents = parseAmountToCents(amountCtrl.text);
+                            if (cents == null || descCtrl.text.trim().isEmpty) {
+                              return;
+                            }
+                            final updated = expense.copyWith(
+                              amountCents: cents,
+                              description: descCtrl.text.trim(),
+                              categoryId: editCategoryId,
+                              date: editDate,
+                              notes: () => notesCtrl.text.trim().isNotEmpty
+                                  ? notesCtrl.text.trim()
+                                  : null,
+                              updatedAt: DateTime.now(),
+                            );
+                            ref.read(updateExpenseProvider).call(updated);
+                            Navigator.pop(ctx);
+                          },
+                          child: Text(l10n?.save ?? 'Speichern'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -397,9 +528,44 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   }
 }
 
+class _TotalFooter extends StatelessWidget {
+  final int totalCents;
+  final String currencySymbol;
+
+  const _TotalFooter({required this.totalCents, required this.currencySymbol});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '${l10n?.totalSpent ?? 'Gesamt'}:',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const Spacer(),
+          Text(
+            formatAmount(totalCents, symbol: currencySymbol),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ExpenseTile extends StatelessWidget {
   final ExpenseEntity expense;
   final CategoryEntity? category;
+  final String currencySymbol;
   final DateFormat dateFormat;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -407,6 +573,7 @@ class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({
     required this.expense,
     required this.category,
+    required this.currencySymbol,
     required this.dateFormat,
     required this.onEdit,
     required this.onDelete,
@@ -433,7 +600,7 @@ class _ExpenseTile extends StatelessWidget {
         '${category?.name ?? ''} · ${dateFormat.format(expense.date)}',
       ),
       trailing: Text(
-        formatAmount(expense.amountCents),
+        formatAmount(expense.amountCents, symbol: currencySymbol),
         style: Theme.of(
           context,
         ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),

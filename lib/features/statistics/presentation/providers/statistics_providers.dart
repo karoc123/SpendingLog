@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/providers/core_providers.dart';
+import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../domain/usecases/get_spending_by_category.dart';
 import '../../domain/usecases/get_spending_summary.dart';
 
@@ -52,3 +53,21 @@ final spendingSummaryProvider = FutureProvider<SpendingSummary>((ref) {
 final selectedChartCategoryProvider = StateProvider<int?>((ref) {
   return null;
 });
+
+typedef StatsExpenseFilter = ({DateTime start, DateTime end, int? categoryId});
+
+final filteredStatsExpensesProvider =
+    FutureProvider.family<List<ExpenseEntity>, StatsExpenseFilter>((
+      ref,
+      filter,
+    ) {
+      final getExpenses = ref.watch(getExpensesProvider);
+      if (filter.categoryId != null) {
+        return getExpenses.byCategory(
+          filter.categoryId!,
+          filter.start,
+          filter.end,
+        );
+      }
+      return getExpenses.inRange(filter.start, filter.end);
+    });

@@ -30,6 +30,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _descriptionFocusNode = FocusNode();
 
   int? _selectedCategoryId;
+  int? _selectedParentCategoryId;
   DateTime _selectedDate = DateTime.now();
   List<AutocompleteSuggestion> _suggestions = [];
   bool _showSuggestions = false;
@@ -80,6 +81,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _descriptionController.text = suggestion.description;
     _amountController.text = (suggestion.amountCents / 100).toStringAsFixed(2);
     _selectedCategoryId = suggestion.categoryId;
+    final categories = ref.read(allCategoriesProvider).value ?? [];
+    final selected = categories
+        .where((c) => c.id == suggestion.categoryId)
+        .firstOrNull;
+    _selectedParentCategoryId = selected?.parentId;
     _descriptionController.addListener(_onDescriptionChanged);
     setState(() {
       _showSuggestions = false;
@@ -137,6 +143,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _descriptionController.addListener(_onDescriptionChanged);
       _notesController.clear();
       _selectedCategoryId = null;
+      _selectedParentCategoryId = null;
       _selectedDate = DateTime.now();
       _amountFocusNode.requestFocus();
       setState(() {});
@@ -386,8 +393,49 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildCategoryChips(List<CategoryEntity> categories) {
-    // Show parent categories first, then subcategories.
     final parents = categories.where((c) => c.parentId == null).toList();
+    final selected = categories
+        .where((c) => c.id == _selectedCategoryId)
+        .firstOrNull;
+    final activeParentId = _selectedParentCategoryId ?? selected?.parentId;
+    final subcategories = activeParentId == null
+        ? <CategoryEntity>[]
+        : categories.where((c) => c.parentId == activeParentId).toList();
+
+    if (activeParentId != null && subcategories.isNotEmpty) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 96),
+        child: SingleChildScrollView(
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              ChoiceChip(
+                label: const Text('← Kategorie'),
+                selected: false,
+                onSelected: (_) {
+                  setState(() {
+                    _selectedParentCategoryId = null;
+                    _selectedCategoryId = null;
+                  });
+                },
+              ),
+              ...subcategories.map((cat) {
+                final isSelected = _selectedCategoryId == cat.id;
+                return ChoiceChip(
+                  label: Text(cat.name),
+                  avatar: Icon(iconFromName(cat.iconName), size: 18),
+                  selected: isSelected,
+                  selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
+                  onSelected: (_) =>
+                      setState(() => _selectedCategoryId = cat.id),
+                );
+              }),
+            ],
+          ),
+        ),
+      );
+    }
 
     return ConstrainedBox(
       constraints: const BoxConstraints(maxHeight: 96),
@@ -402,7 +450,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               avatar: Icon(iconFromName(cat.iconName), size: 18),
               selected: isSelected,
               selectedColor: Color(cat.colorValue).withValues(alpha: 0.3),
-              onSelected: (_) => setState(() => _selectedCategoryId = cat.id),
+              onSelected: (_) {
+                final hasChildren = categories.any((c) => c.parentId == cat.id);
+                setState(() {
+                  if (hasChildren) {
+                    _selectedParentCategoryId = cat.id;
+                    _selectedCategoryId = null;
+                  } else {
+                    _selectedParentCategoryId = null;
+                    _selectedCategoryId = cat.id;
+                  }
+                });
+              },
             );
           }).toList(),
         ),
@@ -417,133 +476,199 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final descCtrl = TextEditingController(text: expense.description);
     final notesCtrl = TextEditingController(text: expense.notes ?? '');
     int? editCategoryId = expense.categoryId;
+    int? editParentCategoryId;
     DateTime editDate = expense.date;
     final l10n = AppLocalizations.of(context);
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
             final categoriesAsync = ref.watch(allCategoriesProvider);
             final currencySymbol =
                 ref.watch(currencySymbolProvider).value ?? '€';
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      l10n?.editExpense ?? 'Ausgabe bearbeiten',
-                      style: Theme.of(ctx).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: amountCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom:
+                      MediaQuery.of(ctx).viewInsets.bottom +
+                      MediaQuery.of(ctx).viewPadding.bottom +
+                      16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        l10n?.editExpense ?? 'Ausgabe bearbeiten',
+                        style: Theme.of(ctx).textTheme.titleMedium,
                       ),
-                      decoration: InputDecoration(
-                        labelText: l10n?.amount ?? 'Betrag',
-                        prefixText: '$currencySymbol ',
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: amountCtrl,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: InputDecoration(
+                          labelText: l10n?.amount ?? 'Betrag',
+                          prefixText: '$currencySymbol ',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: descCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.description ?? 'Beschreibung',
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.description ?? 'Beschreibung',
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    categoriesAsync.when(
-                      data: (categories) {
-                        final parents = categories
-                            .where((c) => c.parentId == null)
-                            .toList();
-                        return ConstrainedBox(
-                          constraints: const BoxConstraints(maxHeight: 96),
-                          child: SingleChildScrollView(
-                            child: Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: parents.map((cat) {
-                                return ChoiceChip(
-                                  label: Text(cat.name),
-                                  selected: editCategoryId == cat.id,
-                                  selectedColor: Color(
-                                    cat.colorValue,
-                                  ).withValues(alpha: 0.3),
-                                  onSelected: (_) => setSheetState(
-                                    () => editCategoryId = cat.id,
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        );
-                      },
-                      loading: () => const CircularProgressIndicator(),
-                      error: (_, __) => const SizedBox.shrink(),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: notesCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.notes ?? 'Notizen (optional)',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        TextButton(
-                          onPressed: () async {
-                            final picked = await showDatePicker(
-                              context: ctx,
-                              initialDate: editDate,
-                              firstDate: DateTime(2000),
-                              lastDate: DateTime.now().add(
-                                const Duration(days: 1),
+                      const SizedBox(height: 12),
+                      categoriesAsync.when(
+                        data: (categories) {
+                          final selected = categories
+                              .where((c) => c.id == editCategoryId)
+                              .firstOrNull;
+                          final activeParentId =
+                              editParentCategoryId ?? selected?.parentId;
+                          final subcategories = activeParentId == null
+                              ? <CategoryEntity>[]
+                              : categories
+                                    .where((c) => c.parentId == activeParentId)
+                                    .toList();
+
+                          if (activeParentId != null &&
+                              subcategories.isNotEmpty) {
+                            return ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 96),
+                              child: SingleChildScrollView(
+                                child: Wrap(
+                                  spacing: 6,
+                                  runSpacing: 4,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('← Kategorie'),
+                                      selected: false,
+                                      onSelected: (_) => setSheetState(() {
+                                        editParentCategoryId = null;
+                                        editCategoryId = null;
+                                      }),
+                                    ),
+                                    ...subcategories.map((cat) {
+                                      return ChoiceChip(
+                                        label: Text(cat.name),
+                                        selected: editCategoryId == cat.id,
+                                        selectedColor: Color(
+                                          cat.colorValue,
+                                        ).withValues(alpha: 0.3),
+                                        onSelected: (_) => setSheetState(
+                                          () => editCategoryId = cat.id,
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
                               ),
                             );
-                            if (picked != null) {
-                              setSheetState(() => editDate = picked);
-                            }
-                          },
-                          child: Text(DateFormat.yMd().format(editDate)),
+                          }
+
+                          final parents = categories
+                              .where((c) => c.parentId == null)
+                              .toList();
+                          return ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 96),
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: parents.map((cat) {
+                                  return ChoiceChip(
+                                    label: Text(cat.name),
+                                    selected: editCategoryId == cat.id,
+                                    selectedColor: Color(
+                                      cat.colorValue,
+                                    ).withValues(alpha: 0.3),
+                                    onSelected: (_) {
+                                      final hasChildren = categories.any(
+                                        (c) => c.parentId == cat.id,
+                                      );
+                                      setSheetState(() {
+                                        if (hasChildren) {
+                                          editParentCategoryId = cat.id;
+                                          editCategoryId = null;
+                                        } else {
+                                          editParentCategoryId = null;
+                                          editCategoryId = cat.id;
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                          );
+                        },
+                        loading: () => const CircularProgressIndicator(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: notesCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.notes ?? 'Notizen (optional)',
                         ),
-                        const Spacer(),
-                        FilledButton(
-                          onPressed: () async {
-                            final cents = parseAmountToCents(amountCtrl.text);
-                            if (cents == null) return;
-                            final updated = expense.copyWith(
-                              amountCents: cents,
-                              description: descCtrl.text.trim(),
-                              categoryId: editCategoryId,
-                              date: editDate,
-                              notes: () => notesCtrl.text.trim().isNotEmpty
-                                  ? notesCtrl.text.trim()
-                                  : null,
-                              updatedAt: DateTime.now(),
-                            );
-                            await ref.read(updateExpenseProvider).call(updated);
-                            ref.invalidate(expenseListProvider);
-                            ref.invalidate(currentMonthExpensesProvider);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                          },
-                          child: Text(l10n?.save ?? 'Speichern'),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          TextButton(
+                            onPressed: () async {
+                              final picked = await showDatePicker(
+                                context: ctx,
+                                initialDate: editDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 1),
+                                ),
+                              );
+                              if (picked != null) {
+                                setSheetState(() => editDate = picked);
+                              }
+                            },
+                            child: Text(DateFormat.yMd().format(editDate)),
+                          ),
+                          const Spacer(),
+                          FilledButton(
+                            onPressed: () async {
+                              final cents = parseAmountToCents(amountCtrl.text);
+                              if (cents == null) return;
+                              final updated = expense.copyWith(
+                                amountCents: cents,
+                                description: descCtrl.text.trim(),
+                                categoryId: editCategoryId,
+                                date: editDate,
+                                notes: () => notesCtrl.text.trim().isNotEmpty
+                                    ? notesCtrl.text.trim()
+                                    : null,
+                                updatedAt: DateTime.now(),
+                              );
+                              await ref
+                                  .read(updateExpenseProvider)
+                                  .call(updated);
+                              ref.invalidate(expenseListProvider);
+                              ref.invalidate(currentMonthExpensesProvider);
+                              if (ctx.mounted) Navigator.pop(ctx);
+                            },
+                            child: Text(l10n?.save ?? 'Speichern'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );

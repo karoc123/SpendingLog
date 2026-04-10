@@ -49,6 +49,12 @@ class ImportCsv {
     return double.tryParse(s);
   }
 
+  static String _normalizeName(String name) => name.trim().toLowerCase();
+
+  static String _subcategoryKey(int parentId, String subcategoryName) {
+    return '$parentId::${_normalizeName(subcategoryName)}';
+  }
+
   Future<int> call(String csvContent) async {
     final trimmed = csvContent.trim();
     if (trimmed.isEmpty) return 0;
@@ -70,9 +76,19 @@ class ImportCsv {
 
     // Load existing categories.
     final existingCategories = await _categoryRepository.getAllCategories();
-    final categoryByName = <String, CategoryEntity>{
-      for (final c in existingCategories) c.name.toLowerCase(): c,
-    };
+    final categoriesByName = <String, CategoryEntity>{};
+    final subcategoriesByParentAndName = <String, CategoryEntity>{};
+    for (final category in existingCategories) {
+      if (category.parentId == null) {
+        categoriesByName[_normalizeName(category.name)] = category;
+      } else {
+        subcategoriesByParentAndName[_subcategoryKey(
+              category.parentId!,
+              category.name,
+            )] =
+            category;
+      }
+    }
 
     int imported = 0;
 
@@ -93,49 +109,49 @@ class ImportCsv {
       if (title.isEmpty) continue;
 
       final note = row.length > 4 ? row[4].toString().trim() : '';
-      final categoryName = row[7].toString().trim();
-      final subcategoryName = row.length > 8 ? row[8].toString().trim() : '';
+      final parentCategoryName = row[7].toString().trim();
+      final categoryName = row.length > 8 ? row[8].toString().trim() : '';
 
-      // Resolve or create parent category.
+      // In CSV mapping: Category = parent category, Subcategory = category.
       int categoryId;
-      if (categoryName.isNotEmpty) {
-        var parentCat = categoryByName[categoryName.toLowerCase()];
+      if (parentCategoryName.isNotEmpty) {
+        var parentCat = categoriesByName[_normalizeName(parentCategoryName)];
         if (parentCat == null) {
           // Create new parent category.
           final newId = await _categoryRepository.addCategory(
             CategoryEntity(
               id: 0,
-              name: categoryName,
+              name: parentCategoryName,
               createdAt: DateTime.now(),
             ),
           );
           parentCat = CategoryEntity(
             id: newId,
-            name: categoryName,
+            name: parentCategoryName,
             createdAt: DateTime.now(),
           );
-          categoryByName[categoryName.toLowerCase()] = parentCat;
+          categoriesByName[_normalizeName(parentCategoryName)] = parentCat;
         }
 
-        if (subcategoryName.isNotEmpty) {
-          final subKey = subcategoryName.toLowerCase();
-          var subCat = categoryByName[subKey];
-          if (subCat == null || subCat.parentId != parentCat.id) {
+        if (categoryName.isNotEmpty) {
+          final key = _subcategoryKey(parentCat.id, categoryName);
+          var subCat = subcategoriesByParentAndName[key];
+          if (subCat == null) {
             final newId = await _categoryRepository.addCategory(
               CategoryEntity(
                 id: 0,
-                name: subcategoryName,
+                name: categoryName,
                 parentId: parentCat.id,
                 createdAt: DateTime.now(),
               ),
             );
             subCat = CategoryEntity(
               id: newId,
-              name: subcategoryName,
+              name: categoryName,
               parentId: parentCat.id,
               createdAt: DateTime.now(),
             );
-            categoryByName[subKey] = subCat;
+            subcategoriesByParentAndName[key] = subCat;
           }
           categoryId = subCat.id;
         } else {
@@ -144,8 +160,8 @@ class ImportCsv {
       } else {
         // Default to first category (Miscellaneous-like).
         final misc =
-            categoryByName['sonstiges'] ??
-            categoryByName['miscellaneous'] ??
+            categoriesByName['sonstiges'] ??
+            categoriesByName['miscellaneous'] ??
             existingCategories.first;
         categoryId = misc.id;
       }

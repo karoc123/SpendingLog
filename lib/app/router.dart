@@ -32,7 +32,21 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/transactions',
-              builder: (context, state) => const TransactionsScreen(),
+              builder: (context, state) {
+                final start = state.uri.queryParameters['start'];
+                final end = state.uri.queryParameters['end'];
+                final categoryId = state.uri.queryParameters['categoryId'];
+                final search = state.uri.queryParameters['search'];
+
+                return TransactionsScreen(
+                  initialStart: start != null ? DateTime.tryParse(start) : null,
+                  initialEnd: end != null ? DateTime.tryParse(end) : null,
+                  initialCategoryId: categoryId != null
+                      ? int.tryParse(categoryId)
+                      : null,
+                  initialSearchQuery: search,
+                );
+              },
             ),
           ],
         ),
@@ -87,6 +101,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         selectedIndex: navigationShell.currentIndex,
         onDestinationSelected: (index) {
           navigationShell.goBranch(
@@ -98,27 +113,27 @@ class ScaffoldWithNavBar extends StatelessWidget {
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            label: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
             selectedIcon: Icon(Icons.receipt_long),
-            label: 'Transaktionen',
+            label: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.pie_chart_outline),
             selectedIcon: Icon(Icons.pie_chart),
-            label: 'Statistik',
+            label: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.repeat_outlined),
             selectedIcon: Icon(Icons.repeat),
-            label: 'Wiederkehrend',
+            label: '',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Einstellungen',
+            label: '',
           ),
         ],
       ),

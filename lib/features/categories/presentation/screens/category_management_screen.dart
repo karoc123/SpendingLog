@@ -220,151 +220,160 @@ class CategoryManagementScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      existing != null
-                          ? (l10n?.editCategory ?? 'Kategorie bearbeiten')
-                          : parentId != null
-                          ? (l10n?.addSubcategory ??
-                                'Unterkategorie hinzufügen')
-                          : (l10n?.addCategory ?? 'Kategorie hinzufügen'),
-                      style: Theme.of(ctx).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: nameCtrl,
-                      decoration: InputDecoration(
-                        labelText: l10n?.name ?? 'Name',
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom:
+                      MediaQuery.of(ctx).viewInsets.bottom +
+                      MediaQuery.of(ctx).viewPadding.bottom +
+                      16,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        existing != null
+                            ? (l10n?.editCategory ?? 'Kategorie bearbeiten')
+                            : parentId != null
+                            ? (l10n?.addSubcategory ??
+                                  'Unterkategorie hinzufügen')
+                            : (l10n?.addCategory ?? 'Kategorie hinzufügen'),
+                        style: Theme.of(ctx).textTheme.titleMedium,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Icon picker.
-                    Text(
-                      l10n?.icon ?? 'Symbol',
-                      style: Theme.of(ctx).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableIconNames.map((name) {
-                        final isSelected = name == selectedIcon;
-                        return GestureDetector(
-                          onTap: () => setSheetState(() => selectedIcon = name),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? Theme.of(ctx).colorScheme.primaryContainer
-                                  : null,
-                              borderRadius: BorderRadius.circular(8),
-                              border: isSelected
-                                  ? Border.all(
-                                      color: Theme.of(ctx).colorScheme.primary,
-                                      width: 2,
-                                    )
-                                  : null,
-                            ),
-                            child: Icon(iconFromName(name), size: 20),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Color picker.
-                    Text(
-                      l10n?.color ?? 'Farbe',
-                      style: Theme.of(ctx).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: availableCategoryColors.map((color) {
-                        final isSelected = color == selectedColor;
-                        return GestureDetector(
-                          onTap: () =>
-                              setSheetState(() => selectedColor = color),
-                          child: Container(
-                            width: 36,
-                            height: 36,
-                            decoration: BoxDecoration(
-                              color: Color(color),
-                              shape: BoxShape.circle,
-                              border: isSelected
-                                  ? Border.all(color: Colors.white, width: 3)
-                                  : null,
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color: Color(
-                                          color,
-                                        ).withValues(alpha: 0.5),
-                                        blurRadius: 6,
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton(
-                        onPressed: () async {
-                          final name = nameCtrl.text.trim();
-                          if (name.isEmpty) return;
-
-                          if (existing != null) {
-                            await ref
-                                .read(updateCategoryProvider)
-                                .call(
-                                  existing.copyWith(
-                                    name: name,
-                                    iconName: selectedIcon,
-                                    colorValue: selectedColor,
-                                  ),
-                                );
-                          } else {
-                            await ref
-                                .read(addCategoryProvider)
-                                .call(
-                                  CategoryEntity(
-                                    id: 0,
-                                    name: name,
-                                    parentId: parentId ?? existing?.parentId,
-                                    iconName: selectedIcon,
-                                    colorValue: selectedColor,
-                                    createdAt: DateTime.now(),
-                                  ),
-                                );
-                          }
-                          ref.invalidate(allCategoriesProvider);
-                          if (ctx.mounted) Navigator.pop(ctx);
-                        },
-                        child: Text(l10n?.save ?? 'Speichern'),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.name ?? 'Name',
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+
+                      // Icon picker.
+                      Text(
+                        l10n?.icon ?? 'Symbol',
+                        style: Theme.of(ctx).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: availableIconNames.map((name) {
+                          final isSelected = name == selectedIcon;
+                          return GestureDetector(
+                            onTap: () =>
+                                setSheetState(() => selectedIcon = name),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Theme.of(ctx).colorScheme.primaryContainer
+                                    : null,
+                                borderRadius: BorderRadius.circular(8),
+                                border: isSelected
+                                    ? Border.all(
+                                        color: Theme.of(
+                                          ctx,
+                                        ).colorScheme.primary,
+                                        width: 2,
+                                      )
+                                    : null,
+                              ),
+                              child: Icon(iconFromName(name), size: 20),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Color picker.
+                      Text(
+                        l10n?.color ?? 'Farbe',
+                        style: Theme.of(ctx).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: availableCategoryColors.map((color) {
+                          final isSelected = color == selectedColor;
+                          return GestureDetector(
+                            onTap: () =>
+                                setSheetState(() => selectedColor = color),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Color(color),
+                                shape: BoxShape.circle,
+                                border: isSelected
+                                    ? Border.all(color: Colors.white, width: 3)
+                                    : null,
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: Color(
+                                            color,
+                                          ).withValues(alpha: 0.5),
+                                          blurRadius: 6,
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final name = nameCtrl.text.trim();
+                            if (name.isEmpty) return;
+
+                            if (existing != null) {
+                              await ref
+                                  .read(updateCategoryProvider)
+                                  .call(
+                                    existing.copyWith(
+                                      name: name,
+                                      iconName: selectedIcon,
+                                      colorValue: selectedColor,
+                                    ),
+                                  );
+                            } else {
+                              await ref
+                                  .read(addCategoryProvider)
+                                  .call(
+                                    CategoryEntity(
+                                      id: 0,
+                                      name: name,
+                                      parentId: parentId ?? existing?.parentId,
+                                      iconName: selectedIcon,
+                                      colorValue: selectedColor,
+                                      createdAt: DateTime.now(),
+                                    ),
+                                  );
+                            }
+                            ref.invalidate(allCategoriesProvider);
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                          child: Text(l10n?.save ?? 'Speichern'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
