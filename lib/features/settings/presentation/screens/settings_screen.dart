@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/screen_help.dart';
@@ -84,7 +85,7 @@ class SettingsScreen extends ConsumerWidget {
             value: biometrics,
             onChanged: kIsWeb
                 ? null
-                : (value) => _toggleBiometrics(context, ref, value),
+                : (_) => _toggleBiometrics(context, ref, !biometrics),
           ),
 
           const Divider(),
@@ -103,9 +104,38 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.go('/settings/export'),
           ),
+
+          const Divider(),
+
+          // -- About / Credits section --
+          _SectionHeader(l10n?.about ?? 'Über'),
+          ListTile(
+            leading: const Icon(Icons.code),
+            title: const Text('GitHub (GPL-3.0)'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () => _launchUrl(
+              'https://github.com/karoc123/SpendingLog/blob/main/LICENSE',
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.favorite),
+            title: const Text('Monekin (big brother)'),
+            trailing: const Icon(Icons.open_in_new),
+            onTap: () =>
+                _launchUrl('https://github.com/enrique-lozano/Monekin'),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final uri = Uri.parse(urlString);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Silently fail if URL cannot be launched
+    }
   }
 
   String _themeModeLabel(String mode, AppLocalizations? l10n) {

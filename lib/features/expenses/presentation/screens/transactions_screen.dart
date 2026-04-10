@@ -227,6 +227,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       _TotalFooter(
                         totalCents: 0,
                         currencySymbol: currencySymbol,
+                        count: 0,
                       ),
                     ],
                   );
@@ -293,6 +294,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     _TotalFooter(
                       totalCents: totalCents,
                       currencySymbol: currencySymbol,
+                      count: filtered.length,
                     ),
                   ],
                 );
@@ -626,8 +628,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
 class _TotalFooter extends StatelessWidget {
   final int totalCents;
   final String currencySymbol;
+  final int count;
 
-  const _TotalFooter({required this.totalCents, required this.currencySymbol});
+  const _TotalFooter({
+    required this.totalCents,
+    required this.currencySymbol,
+    required this.count,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -641,7 +648,7 @@ class _TotalFooter extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '${l10n?.totalSpent ?? 'Gesamt'}:',
+            '${l10n?.totalSpent ?? 'Gesamt'}: ($count)',
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const Spacer(),

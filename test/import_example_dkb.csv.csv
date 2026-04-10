@@ -1,0 +1,13 @@
+﻿"Girokonto";"DEXXXX"
+
+"Kontostand vom 11.04.2026:";"1.234,56 €"
+""
+"Buchungsdatum";"Wertstellung";"Status";"Zahlungspflichtiger";"Zahlungsempfängerin";"Verwendungszweck";"Umsatztyp";"IBAN";"Betrag (€)";"Gläubiger-ID";"Mandatsreferenz";"Kundenreferenz"
+"10.04.26";"10.04.26";"Gebucht";"ISSUER";"Empfänger";"Kartenzahlung";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-8,63";"";"";"123"
+"07.04.26";"07.04.26";"Gebucht";"ISSUER";"Empfänger";"Kartenzahlung";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-7";"";"";"411"
+"07.04.26";"07.04.26";"Gebucht";"Erika Mustermann";"MAX MUSTERMANN";"Miete";"Eingang";"DEXXXXXXXXXXXXXXXXXXXX";"300";"";"";""
+"01.04.26";"01.04.26";"Gebucht";"ISSUER";"Empfänger";"Kartenzahlung";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-141,51";"";"";"3214"
+"01.04.26";"01.04.26";"Gebucht";"Max Mustermann";"Empfänger";"Zahlung";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-6";"";"";""
+"01.04.26";"01.04.26";"Gebucht";"Max Mustermann";"Empfänger";"Mitgliedschaft";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-29,95";"DEXXXXXXXXXXXXXXXXXX";"XXXXXXXXXXXXXX";"11--XXXX-XXXXXXX"
+"01.04.26";"01.04.26";"Gebucht";"Mustermann Max";"Empfänger";"Versicherung";"Ausgang";"DEXXXXXXXXXXXXXXXXXXXX";"-5";"DEXXXXXXXXXXXXXXXXXX";"XXXXXXXXXXXXXXXXXXXX";"XXXXXXXXXXXXXXXXX"
+"25.03.26";"25.03.26";"Gebucht";"Gehalt";"Mustermann Max";"Lohn / Gehalt";"Eingang";"DEXXXXXXXXXXXXXXXXXXXX";"1.234,33";"";"";"XXXXXXXXXX-XXXXXXX"

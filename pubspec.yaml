@@ -36,6 +36,7 @@ dependencies:
   csv: ^8.0.0
   share_plus: ^10.1.4
   file_picker: ^11.0.2
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

@@ -103,6 +103,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get startDate => 'Startdatum';
 
   @override
+  String get nextTransaction => 'Nächste Transaktion';
+
+  @override
   String get active => 'Aktiv';
 
   @override
@@ -159,6 +162,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get exportImport => 'Export / Import';
+
+  @override
+  String get about => 'Über';
 
   @override
   String get csvExport => 'CSV Export';

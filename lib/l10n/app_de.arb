@@ -35,6 +35,7 @@
   "deleteRecurring": "Löschen?",
   "deleteRecurringConfirm": "Wiederkehrende Ausgabe wirklich löschen?",
   "startDate": "Startdatum",
+  "nextTransaction": "Nächste Transaktion",
   "active": "Aktiv",
 
   "settings": "Einstellungen",
@@ -55,6 +56,7 @@
   "data": "Daten",
   "manageCategories": "Kategorien verwalten",
   "exportImport": "Export / Import",
+  "about": "Über",
 
   "csvExport": "CSV Export",
   "jsonExport": "JSON Backup",

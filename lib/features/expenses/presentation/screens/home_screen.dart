@@ -236,7 +236,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Amount + Date row.
+                // Date picker (top).
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: l10n?.date ?? 'Datum',
+                            isDense: true,
+                          ),
+                          child: Text(
+                            DateFormat.yMd(
+                              Localizations.localeOf(context).toString(),
+                            ).format(_selectedDate),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Category selector (top).
+                categoriesAsync.when(
+                  data: (categories) => _buildCategoryChips(categories),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Notes (optional) (top).
+                TextField(
+                  controller: _notesController,
+                  decoration: InputDecoration(
+                    labelText: l10n?.notes ?? 'Notizen (optional)',
+                    isDense: true,
+                  ),
+                  maxLines: 1,
+                ),
+                const SizedBox(height: 20),
+
+                // Amount input (bottom section).
                 Row(
                   children: [
                     Expanded(
@@ -259,30 +303,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             _descriptionFocusNode.requestFocus(),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      flex: 2,
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n?.date ?? 'Datum',
-                            isDense: true,
-                          ),
-                          child: Text(
-                            DateFormat.yMd(
-                              Localizations.localeOf(context).toString(),
-                            ).format(_selectedDate),
-                          ),
-                        ),
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // Description with autocomplete.
+                // Description with autocomplete (bottom section).
                 TextField(
                   controller: _descriptionController,
                   focusNode: _descriptionFocusNode,
@@ -299,27 +324,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 const SizedBox(height: 12),
 
-                // Category selector.
-                categoriesAsync.when(
-                  data: (categories) => _buildCategoryChips(categories),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 8),
-
-                // Notes (optional).
-                TextField(
-                  controller: _notesController,
-                  decoration: InputDecoration(
-                    labelText: l10n?.notes ?? 'Notizen (optional)',
-                    isDense: true,
-                  ),
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 12),
-
-                // Save button.
+                // Save button (bottom).
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(

@@ -29,77 +29,121 @@ class CategoryManagementScreen extends ConsumerWidget {
           final parents = categories.where((c) => c.parentId == null).toList()
             ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 80),
-            itemCount: parents.length,
-            itemBuilder: (context, index) {
-              final parent = parents[index];
-              final children =
-                  categories.where((c) => c.parentId == parent.id).toList()
-                    ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+          // Watch expenses to count them per category
+          final expensesAsync = ref.watch(expenseListProvider);
 
-              return ExpansionTile(
-                leading: CircleAvatar(
-                  backgroundColor: Color(
-                    parent.colorValue,
-                  ).withValues(alpha: 0.2),
-                  child: Icon(
-                    iconFromName(parent.iconName),
-                    color: Color(parent.colorValue),
-                    size: 20,
-                  ),
-                ),
-                title: Text(parent.name),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, size: 20),
-                      onPressed: () =>
-                          _showCategoryForm(context, ref, existing: parent),
+          return expensesAsync.when(
+            data: (expenses) {
+              // Count expenses per category (including all descendants)
+              int countForCategory(int categoryId) {
+                int count = expenses
+                    .where((e) => e.categoryId == categoryId)
+                    .length;
+                // Also count in subcategories
+                final subcatIds = categories
+                    .where((c) => c.parentId == categoryId)
+                    .map((c) => c.id)
+                    .toSet();
+                count += expenses
+                    .where((e) => subcatIds.contains(e.categoryId))
+                    .length;
+                return count;
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.only(bottom: 80),
+                itemCount: parents.length,
+                itemBuilder: (context, index) {
+                  final parent = parents[index];
+                  final children =
+                      categories.where((c) => c.parentId == parent.id).toList()
+                        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
+                  return ExpansionTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Color(
+                        parent.colorValue,
+                      ).withValues(alpha: 0.2),
+                      child: Icon(
+                        iconFromName(parent.iconName),
+                        color: Color(parent.colorValue),
+                        size: 20,
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, size: 20),
-                      onPressed: () =>
-                          _confirmDelete(context, ref, parent, categories),
+                    title: Text(
+                      '${parent.name} (${countForCategory(parent.id)})',
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.add, size: 20),
-                      tooltip:
-                          l10n?.addSubcategory ?? 'Unterkategorie hinzufügen',
-                      onPressed: () =>
-                          _showCategoryForm(context, ref, parentId: parent.id),
-                    ),
-                  ],
-                ),
-                children: children.map((child) {
-                  return ListTile(
-                    contentPadding: const EdgeInsets.only(left: 72, right: 16),
-                    leading: Icon(
-                      iconFromName(child.iconName),
-                      color: Color(child.colorValue),
-                      size: 18,
-                    ),
-                    title: Text(child.name),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, size: 18),
+                          icon: const Icon(Icons.edit, size: 20),
                           onPressed: () =>
-                              _showCategoryForm(context, ref, existing: child),
+                              _showCategoryForm(context, ref, existing: parent),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete, size: 18),
+                          icon: const Icon(Icons.delete, size: 20),
                           onPressed: () =>
-                              _confirmDelete(context, ref, child, categories),
+                              _confirmDelete(context, ref, parent, categories),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add, size: 20),
+                          tooltip:
+                              l10n?.addSubcategory ??
+                              'Unterkategorie hinzufügen',
+                          onPressed: () => _showCategoryForm(
+                            context,
+                            ref,
+                            parentId: parent.id,
+                          ),
                         ),
                       ],
                     ),
+                    children: children.map((child) {
+                      final childCount = expenses
+                          .where((e) => e.categoryId == child.id)
+                          .length;
+                      return ListTile(
+                        contentPadding: const EdgeInsets.only(
+                          left: 72,
+                          right: 16,
+                        ),
+                        leading: Icon(
+                          iconFromName(child.iconName),
+                          color: Color(child.colorValue),
+                          size: 18,
+                        ),
+                        title: Text('${child.name} ($childCount)'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, size: 18),
+                              onPressed: () => _showCategoryForm(
+                                context,
+                                ref,
+                                existing: child,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, size: 18),
+                              onPressed: () => _confirmDelete(
+                                context,
+                                ref,
+                                child,
+                                categories,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
+                },
               );
             },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

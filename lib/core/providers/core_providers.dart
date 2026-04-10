@@ -29,7 +29,8 @@ import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../../features/settings/domain/usecases/export_csv.dart';
 import '../../features/settings/domain/usecases/export_json.dart';
 import '../../features/settings/domain/usecases/get_setting.dart';
-import '../../features/settings/domain/usecases/import_csv.dart';
+import '../../features/settings/domain/usecases/import_csv_monekin.dart';
+import '../../features/settings/domain/usecases/import_csv_dkb.dart';
 import '../../features/settings/domain/usecases/update_setting.dart';
 
 // ---------------------------------------------------------------------------
@@ -186,11 +187,23 @@ final exportJsonProvider = Provider<ExportJson>((ref) {
   );
 });
 
-final importCsvProvider = Provider<ImportCsv>((ref) {
-  return ImportCsv(
+final importCsvMonekinProvider = Provider<ImportCsvMonekin>((ref) {
+  return ImportCsvMonekin(
     ref.watch(expenseRepositoryProvider),
     ref.watch(categoryRepositoryProvider),
   );
+});
+
+final importCsvDkbProvider = Provider<ImportCsvDkb>((ref) {
+  return ImportCsvDkb(
+    ref.watch(expenseRepositoryProvider),
+    ref.watch(categoryRepositoryProvider),
+  );
+});
+
+// Legacy alias for backward compatibility
+final importCsvProvider = Provider<ImportCsvMonekin>((ref) {
+  return ref.watch(importCsvMonekinProvider);
 });
 
 // ---------------------------------------------------------------------------

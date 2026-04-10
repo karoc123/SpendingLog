@@ -392,6 +392,37 @@ class _RecurringExpensesScreenState
                         ],
                       ),
                       if (existing != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          child: Row(
+                            children: [
+                              Text(
+                                l10n?.nextTransaction ?? 'Nächste Transaktion:',
+                                style: Theme.of(ctx).textTheme.bodySmall,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                DateFormat.yMd(
+                                  Localizations.localeOf(ctx).toString(),
+                                ).format(
+                                  _calculateNextTransactionDate(
+                                    selectedStartDate,
+                                    selectedInterval,
+                                  ),
+                                ),
+                                style: Theme.of(ctx).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: isActive
+                                          ? Theme.of(ctx).colorScheme.primary
+                                          : Theme.of(
+                                              ctx,
+                                            ).colorScheme.outlineVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (existing != null)
                         SwitchListTile(
                           title: Text(l10n?.active ?? 'Aktiv'),
                           value: isActive,
@@ -514,5 +545,17 @@ class _RecurringExpensesScreenState
     final parent = catMap[cat.parentId];
     if (parent == null) return cat.name;
     return '${parent.name} -> ${cat.name}';
+  }
+
+  /// Calculate the next transaction date based on start date and interval.
+  DateTime _calculateNextTransactionDate(
+    DateTime startDate,
+    RecurringInterval interval,
+  ) {
+    if (interval == RecurringInterval.monthly) {
+      return DateTime(startDate.year, startDate.month + 1, startDate.day);
+    } else {
+      return DateTime(startDate.year + 1, startDate.month, startDate.day);
+    }
   }
 }

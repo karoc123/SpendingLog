@@ -64,11 +64,19 @@ Run the **Build APK** or **Release** workflow manually from the Actions tab. The
 
 - `build-apk.yml` builds a signed APK artifact.
 - `release.yml` builds both APK and AAB and uploads them to a GitHub Release.
-- If you change `app_icon.png`, regenerate icons before releasing:
-
-```bash
-dart run flutter_launcher_icons
-```
+- **Before releasing**: 
+  - If you changed `app_icon.png`, regenerate icons:
+    ```bash
+    dart run flutter_launcher_icons
+    ```
+  - Verify localization is up-to-date:
+    ```bash
+    flutter gen-l10n
+    ```
+  - Run analyzer and tests:
+    ```bash
+    flutter analyze && flutter test
+    ```
 
 ## 5. Troubleshooting
 

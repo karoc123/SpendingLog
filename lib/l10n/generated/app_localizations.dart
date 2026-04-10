@@ -284,6 +284,12 @@ abstract class AppLocalizations {
   /// **'Startdatum'**
   String get startDate;
 
+  /// No description provided for @nextTransaction.
+  ///
+  /// In de, this message translates to:
+  /// **'Nächste Transaktion'**
+  String get nextTransaction;
+
   /// No description provided for @active.
   ///
   /// In de, this message translates to:
@@ -397,6 +403,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Export / Import'**
   String get exportImport;
+
+  /// No description provided for @about.
+  ///
+  /// In de, this message translates to:
+  /// **'Über'**
+  String get about;
 
   /// No description provided for @csvExport.
   ///

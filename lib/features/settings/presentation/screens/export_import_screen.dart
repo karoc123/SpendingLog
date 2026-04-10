@@ -177,6 +177,31 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
   }
 
   Future<void> _importCsv() async {
+    // Show import type selector
+    final importType = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import-Routine wählen'),
+        content: const Text('Welcher CSV-Format soll importiert werden?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'monekin'),
+            child: const Text('Monekin'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, 'dkb'),
+            child: const Text('DKB Bank'),
+          ),
+        ],
+      ),
+    );
+
+    if (importType == null) return;
+
     setState(() => _loading = true);
     try {
       final result = await FilePicker.pickFiles(
@@ -201,7 +226,9 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
         csvContent = await file.readAsString();
       }
 
-      final count = await ref.read(importCsvProvider).call(csvContent);
+      final count = importType == 'dkb'
+          ? await ref.read(importCsvDkbProvider).call(csvContent)
+          : await ref.read(importCsvMonekinProvider).call(csvContent);
       _showSnackBar(
         '${AppLocalizations.of(context)?.importSuccess ?? 'Import erfolgreich'}: $count ${AppLocalizations.of(context)?.entries ?? 'Einträge'}',
       );
