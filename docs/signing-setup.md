@@ -86,6 +86,7 @@ Run the **Build APK** or **Release** workflow manually from the Actions tab. The
 | Keystore decode fails | Re-encode the keystore — ensure no extra whitespace was added when copying. |
 | Wrong key alias | The alias must match the one used during `keytool -genkey`. Check with `keytool -list -keystore upload-keystore.jks`. |
 | APK is debug-signed | Check the CI log for the "Signing secrets not configured" notice. |
+| `LocalAuthException(... must be a FragmentActivity ...)` | Ensure `android/app/src/main/kotlin/.../MainActivity.kt` extends `FlutterFragmentActivity` (required by `local_auth` on Android). |
 
 ## 6. Important Notes
 

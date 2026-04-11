@@ -36,4 +36,23 @@ void main() {
     // Should show currency setting somewhere
     expect(find.textContaining('€'), findsWidgets);
   });
+
+  testWidgets('SettingsScreen shows Philosophy dialog', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const SettingsScreen(), overrides: buildOverrides()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Philosophy'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(find.text('Philosophy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Philosophy'), findsWidgets);
+    expect(find.textContaining('kein Tracking'), findsOneWidget);
+    expect(find.textContaining('Monekin'), findsWidgets);
+  });
 }

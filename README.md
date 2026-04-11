@@ -6,8 +6,8 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 
 ## Features
 
-- **Fast expense entry** with recent transactions preview on top and the entry form anchored below for quick one-handed input
-- **Two-step category selection** via a consistent modal picker (parent -> subcategory) across create/edit flows
+- **Fast expense entry** with recent transactions preview on top and form order: notes -> amount -> description -> category
+- **Two-step category selection** via a consistent modal picker (parent -> subcategory) across Home, Recurring, and Transactions edit flows
 - **Recurring expenses** (monthly/yearly) with live next-date preview during create/edit and a "generate now" button
 - **Interactive statistics** with clickable pie + bar chart drill-down filtering
 - **Transactions view** with month separators, transaction count, and category path display
@@ -17,10 +17,34 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
   - **Import safeguards**: positive values skipped, deterministic category colors, subcategory color inherits parent, unused seeded defaults cleaned up
 - **Context help button** in each main tab screen (Home, Transactions, Statistics, Recurring, Settings)
 - **Settings enhancements** with links to GitHub (GPL-3.0) and Monekin project
-- **Biometric protection** (fingerprint/face on supported devices) with clipboard-backed error reporting on auth failures
+- **Biometric protection** (fingerprint/face on supported devices)
 - **Localization** in German (default) and English
 - **OLED-friendly dark theme** (true black scaffold, slightly elevated surfaces)
 - **Android navigation** improved to properly handle back button within app hierarchy
+
+## Contributing & Philosophy
+
+Contributions of all kinds are very welcome.  
+If you find bugs, have ideas for improvements, or want to discuss design or implementation details, feel free to open an issue or start a discussion. Pull requests are also okay but this is more or less a copilot project, so they are not expected.
+
+**Philosophy**
+
+SpendingLog is built around a simple, user-respecting mindset:
+
+- **No tracking** – your data stays yours  
+- **No ads** – no distractions, no dark patterns  
+- **No costs** – free to use  
+- **No cloud** – everything works fully offline and locally
+
+The goal is a fast, transparent, and trustworthy expense tracker without hidden trade‑offs.
+
+**Inspiration**
+
+This project is partially inspired by  
+https://github.com/enrique-lozano/Monekin — a great open‑source expense tracking app.  
+Many ideas and concepts were explored there and helped shape parts of SpendingLog.
+
+Thanks to the Monekin project and its contributors!
 
 ## Tech Stack
 
@@ -138,4 +162,4 @@ GitHub Actions workflows in `.github/workflows/`:
 
 ## License
 
-Private project — all rights reserved.
+This project is licensed under the GPL-3.0 License. See [LICENSE](LICENSE) for details.

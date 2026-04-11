@@ -9,6 +9,7 @@ import '../../../../core/utils/icon_map.dart';
 import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 import '../../../categories/domain/entities/category_entity.dart';
+import '../../../statistics/presentation/providers/statistics_providers.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../providers/expense_providers.dart';
 
@@ -365,6 +366,125 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return '${parent.name} -> ${category.name}';
   }
 
+  String _categoryLabel(
+    List<CategoryEntity> categories,
+    int? categoryId, {
+    required String fallback,
+  }) {
+    if (categoryId == null) return fallback;
+    final category = categories.where((c) => c.id == categoryId).firstOrNull;
+    if (category == null) return fallback;
+    if (category.parentId == null) return category.name;
+    final parent = categories
+        .where((c) => c.id == category.parentId)
+        .firstOrNull;
+    if (parent == null) return category.name;
+    return '${parent.name} -> ${category.name}';
+  }
+
+  Future<int?> _showCategoryPickerModal(
+    BuildContext context,
+    List<CategoryEntity> categories, {
+    int? selectedCategoryId,
+  }) {
+    int? activeParentId = categories
+        .where((c) => c.id == selectedCategoryId)
+        .firstOrNull
+        ?.parentId;
+
+    return showModalBottomSheet<int>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final visibleCategories = activeParentId == null
+                ? categories.where((c) => c.parentId == null).toList()
+                : categories
+                      .where((c) => c.parentId == activeParentId)
+                      .toList();
+            final activeParent = activeParentId == null
+                ? null
+                : categories.where((c) => c.id == activeParentId).firstOrNull;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewPadding.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (activeParentId != null)
+                        IconButton(
+                          onPressed: () =>
+                              setModalState(() => activeParentId = null),
+                          icon: const Icon(Icons.arrow_back),
+                        ),
+                      Expanded(
+                        child: Text(
+                          activeParent?.name ?? 'Kategorie',
+                          style: Theme.of(ctx).textTheme.titleMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          AppLocalizations.of(context)?.cancel ?? 'Abbrechen',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: visibleCategories.length,
+                      itemBuilder: (ctx, index) {
+                        final category = visibleCategories[index];
+                        final hasChildren = categories.any(
+                          (c) => c.parentId == category.id,
+                        );
+                        final isSelected = selectedCategoryId == category.id;
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Color(
+                              category.colorValue,
+                            ).withValues(alpha: 0.2),
+                            child: Icon(
+                              iconFromName(category.iconName),
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(category.name),
+                          trailing: hasChildren
+                              ? const Icon(Icons.chevron_right)
+                              : (isSelected ? const Icon(Icons.check) : null),
+                          onTap: () {
+                            if (hasChildren) {
+                              setModalState(() => activeParentId = category.id);
+                              return;
+                            }
+                            Navigator.pop(ctx, category.id);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showEditSheet(ExpenseEntity expense, List<CategoryEntity> categories) {
     final amountCtrl = TextEditingController(
       text: (expense.amountCents / 100).toStringAsFixed(2).replaceAll('.', ','),
@@ -372,7 +492,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final descCtrl = TextEditingController(text: expense.description);
     final notesCtrl = TextEditingController(text: expense.notes ?? '');
     int? editCategoryId = expense.categoryId;
-    int? editParentCategoryId;
     var editDate = expense.date;
     final l10n = AppLocalizations.of(context);
 
@@ -403,6 +522,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                       ),
                       const SizedBox(height: 12),
                       TextField(
+                        controller: notesCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.notes ?? 'Notizen (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
                         controller: amountCtrl,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -419,95 +545,32 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Builder(
-                        builder: (_) {
-                          final selected = categories
-                              .where((c) => c.id == editCategoryId)
-                              .firstOrNull;
-                          final activeParentId =
-                              editParentCategoryId ?? selected?.parentId;
-                          final subcategories = activeParentId == null
-                              ? <CategoryEntity>[]
-                              : categories
-                                    .where((c) => c.parentId == activeParentId)
-                                    .toList();
-
-                          if (activeParentId != null &&
-                              subcategories.isNotEmpty) {
-                            final activeParent = categories
-                                .where((c) => c.id == activeParentId)
-                                .firstOrNull;
-                            return ConstrainedBox(
-                              constraints: const BoxConstraints(maxHeight: 96),
-                              child: SingleChildScrollView(
-                                child: Wrap(
-                                  spacing: 6,
-                                  runSpacing: 4,
-                                  children: [
-                                    ChoiceChip(
-                                      label: Text(
-                                        '← ${activeParent?.name ?? 'Kategorie'}',
-                                      ),
-                                      selected: false,
-                                      onSelected: (_) => setSheetState(() {
-                                        editParentCategoryId = null;
-                                        editCategoryId = null;
-                                      }),
-                                    ),
-                                    ...subcategories.map((cat) {
-                                      return ChoiceChip(
-                                        label: Text(cat.name),
-                                        selected: editCategoryId == cat.id,
-                                        selectedColor: Color(
-                                          cat.colorValue,
-                                        ).withValues(alpha: 0.3),
-                                        onSelected: (_) => setSheetState(
-                                          () => editCategoryId = cat.id,
-                                        ),
-                                      );
-                                    }),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          final parents = categories
-                              .where((c) => c.parentId == null)
-                              .toList();
-                          return ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 96),
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                spacing: 6,
-                                runSpacing: 4,
-                                children: parents.map((cat) {
-                                  return ChoiceChip(
-                                    label: Text(cat.name),
-                                    selected: editCategoryId == cat.id,
-                                    selectedColor: Color(
-                                      cat.colorValue,
-                                    ).withValues(alpha: 0.3),
-                                    onSelected: (_) {
-                                      final hasChildren = categories.any(
-                                        (c) => c.parentId == cat.id,
-                                      );
-                                      setSheetState(() {
-                                        if (hasChildren) {
-                                          editParentCategoryId = cat.id;
-                                          editCategoryId = null;
-                                        } else {
-                                          editParentCategoryId = null;
-                                          editCategoryId = cat.id;
-                                        }
-                                      });
-                                    },
-                                  );
-                                }).toList(),
-                              ),
-                            ),
+                      InkWell(
+                        onTap: () async {
+                          final selection = await _showCategoryPickerModal(
+                            ctx,
+                            categories,
+                            selectedCategoryId: editCategoryId,
                           );
+                          if (selection == null) return;
+                          setSheetState(() => editCategoryId = selection);
                         },
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: 'Kategorie',
+                            suffixIcon: const Icon(Icons.chevron_right),
+                          ),
+                          child: Text(
+                            _categoryLabel(
+                              categories,
+                              editCategoryId,
+                              fallback:
+                                  l10n?.selectCategory ??
+                                  'Bitte Kategorie wählen',
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
                       ListTile(
@@ -530,13 +593,6 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                           }
                         },
                       ),
-                      TextField(
-                        controller: notesCtrl,
-                        decoration: InputDecoration(
-                          labelText: l10n?.notes ?? 'Notizen (optional)',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: IconButton.outlined(
@@ -582,6 +638,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               updatedAt: DateTime.now(),
                             );
                             ref.read(updateExpenseProvider).call(updated);
+                            ref.invalidate(spendingByCategoryProvider);
+                            ref.invalidate(spendingSummaryProvider);
                             Navigator.pop(ctx);
                           },
                           child: Text(l10n?.save ?? 'Speichern'),
@@ -615,6 +673,8 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
           TextButton(
             onPressed: () {
               ref.read(deleteExpenseProvider).call(expense.id);
+              ref.invalidate(spendingByCategoryProvider);
+              ref.invalidate(spendingSummaryProvider);
               Navigator.pop(ctx);
             },
             child: Text(l10n?.delete ?? 'Löschen'),

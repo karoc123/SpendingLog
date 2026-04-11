@@ -5,11 +5,11 @@ Vision: **"I want to gain a clear overview of what I spent my money on and how m
 ## 1. Tracking: Fast & Intelligent
 The goal is minimal effort when logging expenses to remove any daily friction.
 
-* **Thumb-Friendly Entry:** The home screen keeps the recent transaction preview scrollable at the top while the entry form stays anchored below for one-handed input.
+* **Thumb-Friendly Entry:** The home screen keeps the recent transaction preview scrollable at the top while the entry form stays anchored below for one-handed input, with a predictable field order: notes -> amount -> description -> category.
 * **Instant Entry on Launch:** As soon as I open the app, the date field is active. I don't need to navigate; I can start selecting a date immediately.
 * **Smart Suggestions (Autocomplete):** When I start typing a description (e.g., "Grocery Store"), the app recognizes my previous entries and automatically suggests the last amount and the matching category. One tap is enough to save.
 * **Categorization:** I assign every expense to a category (e.g., Groceries, Household, Leisure) to understand the structure of my spending later on.
-* **Two-Step Category Choice:** I open one consistent modal picker, choose the parent category first, and then immediately see only the matching subcategories. This reduces mistakes and keeps create/edit flows consistent.
+* **Two-Step Category Choice:** I open one consistent modal picker, choose the parent category first, and then immediately see only the matching subcategories. This reduces mistakes and keeps create/edit flows consistent, including transaction editing.
 * **Category Management:** I can see at a glance how many transactions belong to each category, and category hierarchies are always expanded for easy navigation.
 * **In-Screen Guidance:** Every main tab offers a help action that explains what I can do in that view.
 
@@ -40,7 +40,7 @@ Privacy without sacrificing convenience.
   - **DKB Bank CSV:** German bank export format. The app automatically looks up categories by recipient name from my transaction history, and if there is no match it falls back to a shared `Import` category.
 * **Import Safety Rules:** During CSV import, positive values (credits) are skipped, category colors are assigned deterministically, fallback categories are created only when needed, and subcategories inherit their parent color.
 * **Biometric Protection:** I can protect app access via fingerprint/face so that my spending remains private, even if I hand my phone to someone else.
-* **Acknowledgments:** Links to [GitHub](https://github.com/karoc123/SpendingLog/blob/main/LICENSE) (GPL-3.0) and [Monekin](https://github.com/enrique-lozano/Monekin) are available in settings for transparency.
+* **Acknowledgments and Philosophy:** Settings includes links to [GitHub](https://github.com/karoc123/SpendingLog/blob/main/LICENSE) (GPL-3.0) and [Monekin](https://github.com/enrique-lozano/Monekin).
 
 ---
 

@@ -108,6 +108,24 @@ void main() {
     expect(find.text('Lebensmittel -> Kaffee'), findsOneWidget);
   });
 
+  testWidgets('HomeScreen uses notes/amount/description/category order', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(const HomeScreen(), overrides: buildOverrides()),
+    );
+    await tester.pumpAndSettle();
+
+    final notesY = tester.getTopLeft(find.text('Notizen (optional)')).dy;
+    final amountY = tester.getTopLeft(find.text('Betrag')).dy;
+    final descriptionY = tester.getTopLeft(find.text('Beschreibung')).dy;
+    final categoryY = tester.getTopLeft(find.text('Bitte Kategorie wählen')).dy;
+
+    expect(notesY, lessThan(amountY));
+    expect(amountY, lessThan(descriptionY));
+    expect(descriptionY, lessThan(categoryY));
+  });
+
   testWidgets('HomeScreen shows recent expenses', (tester) async {
     await tester.pumpWidget(
       buildTestApp(const HomeScreen(), overrides: buildOverrides()),

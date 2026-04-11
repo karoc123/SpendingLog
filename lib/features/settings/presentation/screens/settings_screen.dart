@@ -125,6 +125,45 @@ class SettingsScreen extends ConsumerWidget {
             onTap: () =>
                 _launchUrl('https://github.com/enrique-lozano/Monekin'),
           ),
+          ListTile(
+            leading: const Icon(Icons.menu_book),
+            title: const Text('Philosophy'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showPhilosophyDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPhilosophyDialog(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    final isDe = lang == 'de';
+    final title = isDe ? 'Philosophy' : 'Philosophy';
+    final body = isDe
+        ? 'Danke, dass du SpendingLog nutzt.\n\n'
+              'Diese App ist bewusst einfach und respektiert deine Privatsphaere: '
+              'kein Tracking, keine Werbung, keine Kosten, keine Cloud.\n\n'
+              'Wenn du eine groessere und umfangreichere Open-Source-Alternative suchst, '
+              'schau dir Monekin an.\n\n'
+              'Viel Freude mit FOSS <3'
+        : 'Thank you for using SpendingLog.\n\n'
+              'This app is intentionally simple and respects your privacy: '
+              'no tracking, no ads, no costs, no cloud.\n\n'
+              'If you want a bigger and more feature-rich open-source alternative, '
+              'take a look at Monekin.\n\n'
+              'Enjoy FOSS <3';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
         ],
       ),
     );

@@ -271,40 +271,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Date picker (top).
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n?.date ?? 'Datum',
-                            isDense: true,
-                          ),
-                          child: Text(
-                            DateFormat.yMd(
-                              Localizations.localeOf(context).toString(),
-                            ).format(_selectedDate),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Category selector (top).
-                categoriesAsync.when(
-                  data: (categories) => _buildCategoryPickerField(categories),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Notes (optional) (top).
+                // Notes first.
                 TextField(
                   controller: _notesController,
                   decoration: InputDecoration(
@@ -313,9 +280,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   maxLines: 1,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                // Amount input (bottom section).
+                // Amount second.
                 Row(
                   children: [
                     Expanded(
@@ -342,7 +309,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Description with autocomplete (bottom section).
+                // Description third.
                 TextField(
                   controller: _descriptionController,
                   focusNode: _descriptionFocusNode,
@@ -353,10 +320,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   textInputAction: TextInputAction.next,
                 ),
 
-                // Autocomplete suggestions.
                 if (_showSuggestions)
                   _buildSuggestionsList(categoriesAsync, currencySymbol),
 
+                const SizedBox(height: 12),
+
+                // Category fourth.
+                categoriesAsync.when(
+                  data: (categories) => _buildCategoryPickerField(categories),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Date picker.
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: _pickDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: l10n?.date ?? 'Datum',
+                            isDense: true,
+                          ),
+                          child: Text(
+                            DateFormat.yMd(
+                              Localizations.localeOf(context).toString(),
+                            ).format(_selectedDate),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
 
                 // Save button (bottom).
@@ -614,6 +613,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextField(
+                        controller: notesCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n?.notes ?? 'Notizen (optional)',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
                         controller: amountCtrl,
                         keyboardType: const TextInputType.numberWithOptions(
                           decimal: true,
@@ -665,13 +671,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         },
                         loading: () => const CircularProgressIndicator(),
                         error: (_, __) => const SizedBox.shrink(),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: notesCtrl,
-                        decoration: InputDecoration(
-                          labelText: l10n?.notes ?? 'Notizen (optional)',
-                        ),
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -747,6 +746,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
