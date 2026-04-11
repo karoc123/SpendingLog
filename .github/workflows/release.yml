@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: "17"
@@ -37,6 +37,10 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      # Decodes the base64-encoded keystore and writes both artifacts into
+      # android/app/ — the exact directory where build.gradle.kts expects them.
+      # Any missing secret causes an immediate, visible failure here so that
+      # Gradle never even starts without a valid release signing configuration.
       - name: Setup release signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -44,16 +48,43 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$STORE_PASSWORD" ]; then
-            echo "::error::All four signing secrets must be configured for release builds"
+          echo "--- Verifying signing secrets are present ---"
+          MISSING=""
+          [ -z "$ANDROID_KEYSTORE_BASE64" ] && MISSING="$MISSING ANDROID_KEYSTORE_BASE64"
+          [ -z "$KEY_ALIAS" ]               && MISSING="$MISSING ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ]            && MISSING="$MISSING ANDROID_KEY_PASSWORD"
+          [ -z "$STORE_PASSWORD" ]          && MISSING="$MISSING ANDROID_STORE_PASSWORD"
+          if [ -n "$MISSING" ]; then
+            echo "::error::Release build aborted — the following secrets are not configured:$MISSING"
             exit 1
           fi
+          echo "✓ All four signing secrets are present"
+
+          # Decode the keystore — strip whitespace first to tolerate copy/paste artefacts.
+          KEYSTORE_PATH="android/app/upload-keystore.jks"
           printf '%s' "$ANDROID_KEYSTORE_BASE64" \
             | tr -d '[:space:]' \
-            | base64 -d > android/app/upload-keystore.jks
+            | base64 -d > "$KEYSTORE_PATH"
+
+          BYTES=$(wc -c < "$KEYSTORE_PATH")
+          if [ "$BYTES" -lt 100 ]; then
+            echo "::error::Decoded keystore is suspiciously small (${BYTES} bytes) — ANDROID_KEYSTORE_BASE64 may be corrupted."
+            exit 1
+          fi
+          echo "✓ Keystore decoded: $KEYSTORE_PATH (${BYTES} bytes)"
+
+          # Write key.properties into android/app/ so that the path in
+          # build.gradle.kts (rootProject.file("app/key.properties")) resolves
+          # to the same file.  storeFile is relative to android/app/.
+          KEY_PROPS_PATH="android/app/key.properties"
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
-            > android/key.properties
+            > "$KEY_PROPS_PATH"
+          echo "✓ $KEY_PROPS_PATH written"
+
+          echo "--- Signing setup complete ---"
+          echo "  Keystore : $(realpath $KEYSTORE_PATH)"
+          echo "  Properties: $(realpath $KEY_PROPS_PATH)"
 
       - name: Build release APK
         run: |
