@@ -84,76 +84,11 @@ class AppDatabase extends _$AppDatabase {
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
-      await _seedDefaultCategories();
       await _seedDefaultSettings();
     },
     // Future migration example:
     // onUpgrade: (Migrator m, int from, int to) async { ... }
   );
-
-  Future<void> _seedDefaultCategories() async {
-    final defaults = <Map<String, Object?>>[
-      {
-        'name': 'Lebensmittel',
-        'icon_name': 'shopping_cart',
-        'color_value': 0xFF4CAF50,
-        'sort_order': 0,
-      },
-      {
-        'name': 'Haushalt',
-        'icon_name': 'home',
-        'color_value': 0xFF2196F3,
-        'sort_order': 1,
-      },
-      {
-        'name': 'Freizeit',
-        'icon_name': 'sports_esports',
-        'color_value': 0xFFFF9800,
-        'sort_order': 2,
-      },
-      {
-        'name': 'Essen',
-        'icon_name': 'restaurant',
-        'color_value': 0xFFE91E63,
-        'sort_order': 3,
-      },
-      {
-        'name': 'Transport',
-        'icon_name': 'directions_car',
-        'color_value': 0xFF9C27B0,
-        'sort_order': 4,
-      },
-      {
-        'name': 'Gesundheit',
-        'icon_name': 'favorite',
-        'color_value': 0xFFF44336,
-        'sort_order': 5,
-      },
-      {
-        'name': 'Arbeit',
-        'icon_name': 'work',
-        'color_value': 0xFF607D8B,
-        'sort_order': 6,
-      },
-      {
-        'name': 'Sonstiges',
-        'icon_name': 'category',
-        'color_value': 0xFF795548,
-        'sort_order': 7,
-      },
-    ];
-
-    for (final cat in defaults) {
-      await into(categories).insert(
-        CategoriesCompanion.insert(
-          name: cat['name']! as String,
-          iconName: Value(cat['icon_name']! as String),
-          colorValue: Value(cat['color_value']! as int),
-          sortOrder: Value(cat['sort_order']! as int),
-        ),
-      );
-    }
-  }
 
   Future<void> _seedDefaultSettings() async {
     final defaults = <Map<String, String>>[
@@ -162,6 +97,8 @@ class AppDatabase extends _$AppDatabase {
       {'key': 'locale', 'value': 'de'},
       {'key': 'biometrics_enabled', 'value': 'false'},
       {'key': 'theme_mode', 'value': 'system'},
+      {'key': 'onboarding_version', 'value': '0'},
+      {'key': 'onboarding_completed', 'value': 'false'},
     ];
     for (final s in defaults) {
       await into(

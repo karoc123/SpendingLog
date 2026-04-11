@@ -7,7 +7,7 @@ import '../../domain/usecases/get_spending_by_category.dart';
 class SpendingChart extends StatelessWidget {
   final List<CategorySpending> spending;
   final int? selectedCategoryId;
-  final ValueChanged<int?> onCategoryTap;
+  final ValueChanged<int> onCategoryTap;
 
   const SpendingChart({
     super.key,
@@ -65,15 +65,14 @@ class SpendingChart extends StatelessWidget {
           sectionsSpace: 2,
           pieTouchData: PieTouchData(
             touchCallback: (event, response) {
-              if (event.isInterestedForInteractions &&
-                  response != null &&
-                  response.touchedSection != null) {
-                final index = response.touchedSection!.touchedSectionIndex;
-                if (index >= 0 && index < spending.length) {
-                  final catId = spending[index].categoryId;
-                  onCategoryTap(catId == selectedCategoryId ? null : catId);
-                }
-              }
+              if (event is! FlTapUpEvent) return;
+              final touchedSection = response?.touchedSection;
+              if (touchedSection == null) return;
+
+              final index = touchedSection.touchedSectionIndex;
+              if (index < 0 || index >= spending.length) return;
+
+              onCategoryTap(spending[index].categoryId);
             },
           ),
         ),

@@ -1,0 +1,104 @@
+{
+  "categories": [
+    {
+      "name": "Lebensmittel",
+      "icon_name": "shopping_cart",
+      "color_value": 4283215696,
+      "subcategories": [
+        {"name": "Supermarkt", "icon_name": "local_grocery_store"},
+        {"name": "Baeckerei", "icon_name": "local_cafe"},
+        {"name": "Getraenke", "icon_name": "local_bar"}
+      ]
+    },
+    {
+      "name": "Essen & Trinken",
+      "icon_name": "restaurant",
+      "color_value": 4293467747,
+      "subcategories": [
+        {"name": "Restaurant", "icon_name": "restaurant"},
+        {"name": "Fast Food", "icon_name": "fastfood"},
+        {"name": "Kaffee", "icon_name": "local_cafe"}
+      ]
+    },
+    {
+      "name": "Wohnen",
+      "icon_name": "home",
+      "color_value": 4280391411,
+      "subcategories": [
+        {"name": "Miete", "icon_name": "home"},
+        {"name": "Strom", "icon_name": "electric_bolt"},
+        {"name": "Wasser", "icon_name": "water_drop"}
+      ]
+    },
+    {
+      "name": "Mobilitaet",
+      "icon_name": "directions_car",
+      "color_value": 4288423856,
+      "subcategories": [
+        {"name": "Auto", "icon_name": "directions_car"},
+        {"name": "Tanken", "icon_name": "local_gas_station"},
+        {"name": "OePNV", "icon_name": "directions_bus"}
+      ]
+    },
+    {
+      "name": "Freizeit",
+      "icon_name": "sports_esports",
+      "color_value": 4294953510,
+      "subcategories": [
+        {"name": "Streaming", "icon_name": "subscriptions"},
+        {"name": "Games", "icon_name": "sports_esports"},
+        {"name": "Reisen", "icon_name": "flight"}
+      ]
+    },
+    {
+      "name": "Gesundheit",
+      "icon_name": "local_hospital",
+      "color_value": 4294198070,
+      "subcategories": [
+        {"name": "Apotheke", "icon_name": "medication"},
+        {"name": "Arzt", "icon_name": "local_hospital"},
+        {"name": "Fitness", "icon_name": "fitness_center"}
+      ]
+    },
+    {
+      "name": "Arbeit & Bildung",
+      "icon_name": "work",
+      "color_value": 4284513675,
+      "subcategories": [
+        {"name": "Buero", "icon_name": "work"},
+        {"name": "Buecher", "icon_name": "menu_book"},
+        {"name": "Kurse", "icon_name": "school"}
+      ]
+    },
+    {
+      "name": "Finanzen",
+      "icon_name": "account_balance",
+      "color_value": 4280391411,
+      "subcategories": [
+        {"name": "Versicherungen", "icon_name": "security"},
+        {"name": "Sparen", "icon_name": "savings"},
+        {"name": "Gebuehren", "icon_name": "payments"}
+      ]
+    },
+    {
+      "name": "Familie",
+      "icon_name": "child_care",
+      "color_value": 4292796121,
+      "subcategories": [
+        {"name": "Kinder", "icon_name": "child_care"},
+        {"name": "Haustiere", "icon_name": "pets"},
+        {"name": "Geschenke", "icon_name": "card_giftcard"}
+      ]
+    },
+    {
+      "name": "Sonstiges",
+      "icon_name": "category",
+      "color_value": 4286545791,
+      "subcategories": [
+        {"name": "Haushalt", "icon_name": "cleaning_services"},
+        {"name": "Kleidung", "icon_name": "checkroom"},
+        {"name": "Diverses", "icon_name": "category"}
+      ]
+    }
+  ]
+}

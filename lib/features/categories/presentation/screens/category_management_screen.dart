@@ -307,35 +307,48 @@ class CategoryManagementScreen extends ConsumerWidget {
                         style: Theme.of(ctx).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: availableIconNames.map((name) {
-                          final isSelected = name == selectedIcon;
-                          return GestureDetector(
-                            onTap: () =>
-                                setSheetState(() => selectedIcon = name),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? Theme.of(ctx).colorScheme.primaryContainer
-                                    : null,
-                                borderRadius: BorderRadius.circular(8),
-                                border: isSelected
-                                    ? Border.all(
-                                        color: Theme.of(
-                                          ctx,
-                                        ).colorScheme.primary,
-                                        width: 2,
-                                      )
-                                    : null,
-                              ),
-                              child: Icon(iconFromName(name), size: 20),
-                            ),
-                          );
-                        }).toList(),
+                      SizedBox(
+                        height: 200,
+                        child: Scrollbar(
+                          thumbVisibility: true,
+                          child: GridView.builder(
+                            padding: const EdgeInsets.only(right: 8),
+                            itemCount: availableIconNames.length,
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 6,
+                                  mainAxisSpacing: 8,
+                                  crossAxisSpacing: 8,
+                                ),
+                            itemBuilder: (context, index) {
+                              final name = availableIconNames[index];
+                              final isSelected = name == selectedIcon;
+                              return GestureDetector(
+                                onTap: () =>
+                                    setSheetState(() => selectedIcon = name),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? Theme.of(
+                                            ctx,
+                                          ).colorScheme.primaryContainer
+                                        : null,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: Theme.of(
+                                              ctx,
+                                            ).colorScheme.primary,
+                                            width: 2,
+                                          )
+                                        : null,
+                                  ),
+                                  child: Icon(iconFromName(name), size: 20),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
 

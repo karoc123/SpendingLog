@@ -1,15 +1,21 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
 
+import '../core/database/app_database.dart';
 import '../core/providers/core_providers.dart';
 import '../l10n/generated/app_localizations.dart';
 import 'router.dart';
 import 'theme.dart';
+
+const _requiredOnboardingVersion = '1';
 
 class SpendingLogApp extends ConsumerStatefulWidget {
   const SpendingLogApp({super.key});
@@ -27,6 +33,7 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
   bool _isLocked = false;
   bool _isAuthenticating = false;
   bool _didColdStartCheck = false;
+  bool _isOnboardingRunning = false;
 
   @override
   void initState() {
@@ -46,6 +53,7 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkBiometricLockRequirement(isColdStart: true);
+      _ensureOnboardingCompleted();
     });
   }
 
@@ -120,12 +128,264 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
 
       if (ok && mounted) {
         setState(() => _isLocked = false);
+        await _ensureOnboardingCompleted();
       }
     } catch (_) {
       // Keep locked on failure.
     } finally {
       _isAuthenticating = false;
     }
+  }
+
+  Future<void> _ensureOnboardingCompleted() async {
+    if (!mounted || _isLocked || _isOnboardingRunning) return;
+
+    final getSetting = ref.read(getSettingProvider);
+    final updateSetting = ref.read(updateSettingProvider);
+
+    final onboardingCompleted =
+        (await getSetting.call('onboarding_completed')) == 'true';
+    final onboardingVersion = await getSetting.call('onboarding_version');
+    final needsOnboarding =
+        !onboardingCompleted || onboardingVersion != _requiredOnboardingVersion;
+    if (!needsOnboarding || !mounted) {
+      return;
+    }
+
+    _isOnboardingRunning = true;
+    try {
+      final localeSetting =
+          await getSetting.call('locale') ??
+          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      final themeSetting = await getSetting.call('theme_mode') ?? 'system';
+
+      final result = await _showOnboardingDialog(
+        localeCode: localeSetting == 'en' ? 'en' : 'de',
+        themeMode: _normalizeThemeMode(themeSetting),
+      );
+
+      if (!mounted || result == null) return;
+
+      await updateSetting.call('locale', result.localeCode);
+      await updateSetting.call('theme_mode', result.themeMode);
+
+      if (result.importDefaultCategories) {
+        final db = ref.read(databaseProvider);
+        final hasCategories = (await db.getAllCategories()).isNotEmpty;
+        if (!hasCategories) {
+          await _seedDefaultCategories(db, result.localeCode);
+        }
+      }
+
+      await updateSetting.call(
+        'onboarding_version',
+        _requiredOnboardingVersion,
+      );
+      await updateSetting.call('onboarding_completed', 'true');
+    } finally {
+      _isOnboardingRunning = false;
+    }
+  }
+
+  Future<void> _seedDefaultCategories(AppDatabase db, String localeCode) async {
+    final assetPath = localeCode == 'en'
+        ? 'assets/default_categories/en_defaults.json'
+        : 'assets/default_categories/de_defaults.json';
+    final jsonString = await rootBundle.loadString(assetPath);
+    final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+    final categories = decoded['categories'];
+    if (categories is! List) return;
+
+    for (var parentIndex = 0; parentIndex < categories.length; parentIndex++) {
+      final parentJson = categories[parentIndex];
+      if (parentJson is! Map<String, dynamic>) continue;
+
+      final parentName = (parentJson['name'] as String?)?.trim();
+      if (parentName == null || parentName.isEmpty) continue;
+
+      final parentIcon =
+          (parentJson['icon_name'] as String?)?.trim().isNotEmpty == true
+          ? parentJson['icon_name'] as String
+          : 'category';
+      final parentColor = _parseColorValue(parentJson['color_value']);
+
+      final parentId = await db.insertCategory(
+        CategoriesCompanion.insert(
+          name: parentName,
+          iconName: Value(parentIcon),
+          colorValue: Value(parentColor),
+          sortOrder: Value(parentIndex),
+          createdAt: Value(DateTime.now()),
+        ),
+      );
+
+      final subcategories = parentJson['subcategories'];
+      if (subcategories is! List) continue;
+
+      for (var subIndex = 0; subIndex < subcategories.length; subIndex++) {
+        final subJson = subcategories[subIndex];
+        if (subJson is! Map<String, dynamic>) continue;
+
+        final subName = (subJson['name'] as String?)?.trim();
+        if (subName == null || subName.isEmpty) continue;
+
+        final subIcon =
+            (subJson['icon_name'] as String?)?.trim().isNotEmpty == true
+            ? subJson['icon_name'] as String
+            : parentIcon;
+
+        await db.insertCategory(
+          CategoriesCompanion.insert(
+            name: subName,
+            parentId: Value(parentId),
+            iconName: Value(subIcon),
+            colorValue: Value(parentColor),
+            sortOrder: Value(subIndex),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
+      }
+    }
+  }
+
+  int _parseColorValue(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return 0xFF9E9E9E;
+  }
+
+  String _normalizeThemeMode(String value) {
+    if (value == 'light' || value == 'dark') return value;
+    return 'system';
+  }
+
+  Future<_OnboardingResult?> _showOnboardingDialog({
+    required String localeCode,
+    required String themeMode,
+  }) {
+    var selectedLocale = localeCode;
+    var selectedTheme = themeMode;
+    var importDefaults = true;
+
+    String t(String de, String en) {
+      return selectedLocale == 'en' ? en : de;
+    }
+
+    return showDialog<_OnboardingResult>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: Text(t('Einrichtung', 'Setup')),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      t(
+                        'Bitte waehle Sprache, Theme und Standardkategorien.',
+                        'Please choose language, theme, and default categories.',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      t('Sprache', 'Language'),
+                      style: Theme.of(ctx).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment<String>(
+                          value: 'de',
+                          label: Text('Deutsch'),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'en',
+                          label: Text('English'),
+                        ),
+                      ],
+                      selected: {selectedLocale},
+                      onSelectionChanged: (selection) {
+                        setDialogState(() {
+                          selectedLocale = selection.first;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      t('Theme', 'Theme'),
+                      style: Theme.of(ctx).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: [
+                        ButtonSegment<String>(
+                          value: 'system',
+                          label: Text(t('System', 'System')),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'light',
+                          label: Text(t('Hell', 'Light')),
+                        ),
+                        ButtonSegment<String>(
+                          value: 'dark',
+                          label: Text(t('Dunkel', 'Dark')),
+                        ),
+                      ],
+                      selected: {selectedTheme},
+                      onSelectionChanged: (selection) {
+                        setDialogState(() {
+                          selectedTheme = selection.first;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CheckboxListTile(
+                      value: importDefaults,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        t(
+                          'Standardkategorien hinzufuegen',
+                          'Add default categories',
+                        ),
+                      ),
+                      subtitle: Text(
+                        t(
+                          'Importiert Kategorien mit passenden Unterkategorien.',
+                          'Imports categories with matching subcategories.',
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setDialogState(() {
+                          importDefaults = value ?? false;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop(
+                      _OnboardingResult(
+                        localeCode: selectedLocale,
+                        themeMode: selectedTheme,
+                        importDefaultCategories: importDefaults,
+                      ),
+                    );
+                  },
+                  child: Text(t('Weiter', 'Continue')),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -214,4 +474,16 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
       },
     );
   }
+}
+
+class _OnboardingResult {
+  final String localeCode;
+  final String themeMode;
+  final bool importDefaultCategories;
+
+  const _OnboardingResult({
+    required this.localeCode,
+    required this.themeMode,
+    required this.importDefaultCategories,
+  });
 }
