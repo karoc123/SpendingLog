@@ -121,38 +121,40 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                 Expanded(
                   child: categoriesAsync.when(
                     data: (categories) {
-                      final parents = categories
-                          .where((c) => c.parentId == null)
-                          .toList();
-                      return DropdownButtonFormField<int?>(
-                        initialValue: _selectedCategoryId,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          labelText: l10n?.filterCategory ?? 'Kategorie',
-                          border: const OutlineInputBorder(),
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                      return InkWell(
+                        onTap: () async {
+                          final selection =
+                              await _showCategoryFilterPickerModal(
+                                context,
+                                categories,
+                                selectedCategoryId: _selectedCategoryId,
+                                allLabel: l10n?.allCategories ?? 'Alle',
+                              );
+                          if (selection == null) return;
+                          setState(
+                            () => _selectedCategoryId = selection == -1
+                                ? null
+                                : selection,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: l10n?.filterCategory ?? 'Kategorie',
+                            border: const OutlineInputBorder(),
+                            isDense: true,
+                            suffixIcon: const Icon(Icons.chevron_right),
+                          ),
+                          child: Text(
+                            _selectedCategoryId == null
+                                ? (l10n?.allCategories ?? 'Alle')
+                                : _categoryLabel(
+                                    categories,
+                                    _selectedCategoryId,
+                                    fallback: l10n?.allCategories ?? 'Alle',
+                                  ),
                           ),
                         ),
-                        items: [
-                          DropdownMenuItem<int?>(
-                            value: null,
-                            child: Text(l10n?.allCategories ?? 'Alle'),
-                          ),
-                          ...parents.map(
-                            (c) => DropdownMenuItem<int?>(
-                              value: c.id,
-                              child: Text(
-                                c.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _selectedCategoryId = value),
                       );
                     },
                     loading: () => const SizedBox.shrink(),
@@ -440,6 +442,116 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
+                  Flexible(
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: visibleCategories.length,
+                      itemBuilder: (ctx, index) {
+                        final category = visibleCategories[index];
+                        final hasChildren = categories.any(
+                          (c) => c.parentId == category.id,
+                        );
+                        final isSelected = selectedCategoryId == category.id;
+
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: Color(
+                              category.colorValue,
+                            ).withValues(alpha: 0.2),
+                            child: Icon(
+                              iconFromName(category.iconName),
+                              size: 18,
+                            ),
+                          ),
+                          title: Text(category.name),
+                          trailing: hasChildren
+                              ? const Icon(Icons.chevron_right)
+                              : (isSelected ? const Icon(Icons.check) : null),
+                          onTap: () {
+                            if (hasChildren) {
+                              setModalState(() => activeParentId = category.id);
+                              return;
+                            }
+                            Navigator.pop(ctx, category.id);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<int?> _showCategoryFilterPickerModal(
+    BuildContext context,
+    List<CategoryEntity> categories, {
+    int? selectedCategoryId,
+    required String allLabel,
+  }) {
+    int? activeParentId = categories
+        .where((c) => c.id == selectedCategoryId)
+        .firstOrNull
+        ?.parentId;
+
+    return showModalBottomSheet<int>(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final visibleCategories = activeParentId == null
+                ? categories.where((c) => c.parentId == null).toList()
+                : categories
+                      .where((c) => c.parentId == activeParentId)
+                      .toList();
+            final activeParent = activeParentId == null
+                ? null
+                : categories.where((c) => c.id == activeParentId).firstOrNull;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(ctx).viewPadding.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      if (activeParentId != null)
+                        IconButton(
+                          onPressed: () =>
+                              setModalState(() => activeParentId = null),
+                          icon: const Icon(Icons.arrow_back),
+                        ),
+                      Expanded(
+                        child: Text(
+                          activeParent?.name ?? 'Kategorie',
+                          style: Theme.of(ctx).textTheme.titleMedium,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(
+                          AppLocalizations.of(context)?.cancel ?? 'Abbrechen',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (activeParentId == null)
+                    ListTile(
+                      leading: const Icon(Icons.layers_clear),
+                      title: Text(allLabel),
+                      onTap: () => Navigator.pop(ctx, -1),
+                    ),
                   Flexible(
                     child: ListView.builder(
                       shrinkWrap: true,

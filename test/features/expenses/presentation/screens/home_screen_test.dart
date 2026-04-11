@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:spending_log/features/expenses/presentation/screens/home_screen.dart';
 import 'package:spending_log/features/expenses/presentation/providers/expense_providers.dart';
+import 'package:spending_log/features/expenses/domain/entities/autocomplete_suggestion.dart';
 import 'package:spending_log/features/expenses/domain/entities/expense_entity.dart';
 import 'package:spending_log/features/categories/domain/entities/category_entity.dart';
 import 'package:spending_log/core/providers/core_providers.dart';
@@ -62,6 +63,16 @@ void main() {
       currentMonthExpensesProvider.overrideWith(
         (ref) => Stream.value(testExpenses),
       ),
+      autocompleteSuggestionsProvider.overrideWith((ref, query) async {
+        return [
+          const AutocompleteSuggestion(
+            description: 'Kaffee',
+            categoryId: 2,
+            amountCents: 499,
+            frequency: 3,
+          ),
+        ];
+      }),
       committedAmountProvider.overrideWith((ref) async => 0),
       currencySymbolProvider.overrideWith((ref) => Stream.value('€')),
       addExpenseProvider.overrideWithValue(mockAddExpense),
@@ -151,5 +162,38 @@ void main() {
           find.byIcon(Icons.add).evaluate().isNotEmpty,
       isTrue,
     );
+  });
+
+  testWidgets('Home suggestions split left/right amount behavior', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(const HomeScreen(), overrides: buildOverrides()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(2), 'Ka');
+    await tester.pumpAndSettle();
+
+    expect(find.text('inkl. Betrag'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('suggestion-left-0')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Lebensmittel -> Kaffee'), findsOneWidget);
+    final amountFieldAfterLeft = tester.widget<TextField>(
+      find.byType(TextField).at(1),
+    );
+    expect(amountFieldAfterLeft.controller?.text ?? '', isEmpty);
+
+    await tester.enterText(find.byType(TextField).at(2), 'Ka');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('suggestion-right-0')));
+    await tester.pumpAndSettle();
+
+    final amountFieldAfterRight = tester.widget<TextField>(
+      find.byType(TextField).at(1),
+    );
+    expect(amountFieldAfterRight.controller?.text, '4.99');
   });
 }

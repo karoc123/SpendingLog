@@ -7,7 +7,7 @@ The goal is minimal effort when logging expenses to remove any daily friction.
 
 * **Thumb-Friendly Entry:** The home screen keeps the recent transaction preview scrollable at the top while the entry form stays anchored below for one-handed input, with a predictable field order: notes -> amount -> description -> category.
 * **Instant Entry on Launch:** As soon as I open the app, the date field is active. I don't need to navigate; I can start selecting a date immediately.
-* **Smart Suggestions (Autocomplete):** When I start typing a description (e.g., "Grocery Store"), the app recognizes my previous entries and automatically suggests the last amount and the matching category. One tap is enough to save.
+* **Smart Suggestions (Autocomplete):** When I start typing a description (e.g., "Grocery Store"), the app recognizes my previous entries and suggests matching entries. I can choose either a quick apply (description + category) or a full apply (description + category + amount).
 * **Categorization:** I assign every expense to a category (e.g., Groceries, Household, Leisure) to understand the structure of my spending later on.
 * **Two-Step Category Choice:** I open one consistent modal picker, choose the parent category first, and then immediately see only the matching subcategories. This reduces mistakes and keeps create/edit flows consistent, including transaction editing.
 * **Category Management:** I can see at a glance how many transactions belong to each category, and category hierarchies are always expanded for easy navigation.
@@ -25,8 +25,8 @@ Recurring expenses shouldn't require manual work every month.
 This is where data turns into insights.
 
 * **Time-Based Overview:** I can toggle between a monthly and a yearly view to identify trends in my spending behavior.
-* **Visual Analysis:** A chart shows me at a glance the percentage share of my categories relative to my total spending. I can immediately see if I spent "too much" on leisure this month.
-* **Interactive Drill-down:** If a category in the pie chart catches my eye, or if I tap a period in the bar chart, I can jump directly to a filtered transaction list.
+* **Visual Analysis:** A chart shows me at a glance the percentage share of my categories relative to my total spending, including icon badges for major slices.
+* **Interactive Drill-down:** Tapping a pie slice drills from parent categories into subcategories without leaving the chart; tapping a legend item opens the filtered transaction view directly. The lower bar chart uses stacked category colors per period.
 * **Transaction Count:** In the transactions overview, I see the number of transactions in parentheses next to the total (e.g., "Gesamt: €150.50 (5)") so I know how many expenses make up that sum.
 * **Readable History:** The transaction list shows month separators and a filtered total so month changes are visible instantly. Each transaction displays the category path (Category → Subcategory) for clarity.
 
@@ -39,16 +39,8 @@ Privacy without sacrificing convenience.
   - **Monekin CSV:** Standard format with parent/child categories and custom descriptions.
   - **DKB Bank CSV:** German bank export format. The app automatically looks up categories by recipient name from my transaction history, and if there is no match it falls back to a shared `Import` category.
 * **Import Safety Rules:** During CSV import, positive values (credits) are skipped, category colors are assigned deterministically, fallback categories are created only when needed, and subcategories inherit their parent color.
-* **Biometric Protection:** I can protect app access via fingerprint/face so that my spending remains private, even if I hand my phone to someone else.
+* **Biometric Protection:** I can protect app access via fingerprint/face. When enabled, the app locks on cold start and again after 15 minutes of inactivity.
 * **Acknowledgments and Philosophy:** Settings includes links to [GitHub](https://github.com/karoc123/SpendingLog/blob/main/LICENSE) (GPL-3.0) and [Monekin](https://github.com/enrique-lozano/Monekin).
-
----
-
-### The Vision in Daily Life:
-You open the app at the checkout, type **"12.50"**, write **"Lunch"**, the app recognizes **"Category: Food"**, and you hit save. Done. 
-
-In the evening, you click on the **"Food"** section in your statistics and see: *"Ah, I've eaten out 5 times this month – that's a total of €62.50."* – **Full control, zero stress.**
-
 
 ---
 

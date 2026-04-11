@@ -49,10 +49,24 @@ final spendingSummaryProvider = FutureProvider<SpendingSummary>((ref) {
   return ref.watch(getSpendingSummaryProvider).call(start, end);
 });
 
-/// Currently selected category in the chart for drill-down filtering.
-final selectedChartCategoryProvider = StateProvider<int?>((ref) {
+/// Selected parent category in the pie chart drill-down.
+final selectedParentChartCategoryProvider = StateProvider<int?>((ref) {
   return null;
 });
+
+/// Selected subcategory in parent drill-down view (optional).
+final selectedSubChartCategoryProvider = StateProvider<int?>((ref) {
+  return null;
+});
+
+/// Subcategory breakdown for a selected parent category.
+final subcategorySpendingProvider =
+    FutureProvider.family<List<CategorySpending>, int>((ref, parentCategoryId) {
+      final (start, end) = ref.watch(statsDateRangeProvider);
+      return ref
+          .watch(getSpendingByCategoryProvider)
+          .subcategoryBreakdown(parentCategoryId, start, end);
+    });
 
 typedef StatsExpenseFilter = ({DateTime start, DateTime end, int? categoryId});
 

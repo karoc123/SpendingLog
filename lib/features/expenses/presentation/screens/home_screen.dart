@@ -78,10 +78,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _applySuggestion(AutocompleteSuggestion suggestion) {
+  void _applySuggestion(
+    AutocompleteSuggestion suggestion, {
+    required bool includeAmount,
+  }) {
     _descriptionController.removeListener(_onDescriptionChanged);
     _descriptionController.text = suggestion.description;
-    _amountController.text = (suggestion.amountCents / 100).toStringAsFixed(2);
+    if (includeAmount) {
+      _amountController.text = (suggestion.amountCents / 100).toStringAsFixed(
+        2,
+      );
+    }
     _selectedCategoryId = suggestion.categoryId;
     _descriptionController.addListener(_onDescriptionChanged);
     setState(() {
@@ -397,17 +404,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
           final cat = catMap[suggestion.categoryId];
-          return ListTile(
-            dense: true,
-            title: Text(suggestion.description),
-            subtitle: Text(cat?.name ?? ''),
-            trailing: Text(
-              formatAmount(suggestion.amountCents, symbol: currencySymbol),
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            onTap: () => _applySuggestion(suggestion),
+          final theme = Theme.of(context);
+          return Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  key: ValueKey('suggestion-left-$index'),
+                  onTap: () =>
+                      _applySuggestion(suggestion, includeAmount: false),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          suggestion.description,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(cat?.name ?? '', style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              InkWell(
+                key: ValueKey('suggestion-right-$index'),
+                onTap: () => _applySuggestion(suggestion, includeAmount: true),
+                child: Container(
+                  width: 110,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(
+                      alpha: 0.5,
+                    ),
+                    border: Border(
+                      left: BorderSide(color: theme.colorScheme.outlineVariant),
+                      bottom: BorderSide(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatAmount(
+                          suggestion.amountCents,
+                          symbol: currencySymbol,
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text('inkl. Betrag', style: theme.textTheme.labelSmall),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),

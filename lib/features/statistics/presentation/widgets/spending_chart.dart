@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/icon_map.dart';
 import '../../domain/usecases/get_spending_by_category.dart';
 
 class SpendingChart extends StatelessWidget {
@@ -40,7 +41,18 @@ class SpendingChart extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
-        badgeWidget: null,
+        badgeWidget: percentage >= 10
+            ? CircleAvatar(
+                radius: 10,
+                backgroundColor: Colors.white,
+                child: Icon(
+                  iconFromName(cs.iconName),
+                  size: 14,
+                  color: Color(cs.colorValue),
+                ),
+              )
+            : null,
+        badgePositionPercentageOffset: 1.15,
       );
     }).toList();
 

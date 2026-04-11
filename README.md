@@ -9,15 +9,18 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 - **Fast expense entry** with recent transactions preview on top and form order: notes -> amount -> description -> category
 - **Two-step category selection** via a consistent modal picker (parent -> subcategory) across Home, Recurring, and Transactions edit flows
 - **Recurring expenses** (monthly/yearly) with live next-date preview during create/edit and a "generate now" button
-- **Interactive statistics** with clickable pie + bar chart drill-down filtering
+- **Interactive statistics** with pie drill-down (parent -> subcategory), clickable legend jump-to-transactions, icon badges for major slices, and stacked category-colored bars
 - **Transactions view** with month separators, transaction count, and category path display
+- **Transactions filters** with the same modal category picker and explicit "All categories" reset option
 - **Category management** with transaction counts per category
 - **CSV/JSON export & import**:
   - **Multiple import formats**: Monekin (standard) and DKB Bank (German bank CSV) with automatic category lookup by recipient and an on-demand `Import` fallback category
   - **Import safeguards**: positive values skipped, deterministic category colors, subcategory color inherits parent, unused seeded defaults cleaned up
 - **Context help button** in each main tab screen (Home, Transactions, Statistics, Recurring, Settings)
-- **Settings enhancements** with links to GitHub (GPL-3.0) and Monekin project
-- **Biometric protection** (fingerprint/face on supported devices)
+- **Settings enhancements** with links to GitHub (GPL-3.0), Monekin
+- **Biometric protection** with hard lock on cold start or after 15 minutes inactivity (when enabled)
+- **Smart suggestions split actions**: left click applies description+category, right click applies description+category+amount
+- **Expanded category icon set** (more than doubled) for finer visual categorization
 - **Localization** in German (default) and English
 - **OLED-friendly dark theme** (true black scaffold, slightly elevated surfaces)
 - **Android navigation** improved to properly handle back button within app hierarchy
@@ -40,9 +43,7 @@ The goal is a fast, transparent, and trustworthy expense tracker without hidden 
 
 **Inspiration**
 
-This project is partially inspired by  
-https://github.com/enrique-lozano/Monekin — a great open‑source expense tracking app.  
-Many ideas and concepts were explored there and helped shape parts of SpendingLog.
+This project is partially inspired by [Monekin](https://github.com/enrique-lozano/Monekin) - a great open‑source expense tracking app. Many ideas and concepts were explored there and helped shape parts of SpendingLog.
 
 Thanks to the Monekin project and its contributors!
 
