@@ -86,5 +86,14 @@
   "searchTransactions": "Search…",
   "filterCategory": "Category",
   "allCategories": "All",
-  "clearFilter": "Clear filter"
+  "clearFilter": "Clear filter",
+  "fixedShort": "Fix",
+  "flexShort": "Flex",
+  "recurringGenerated": "Generated from recurring rule",
+  "setupTitle": "Setup",
+  "setupDescription": "Please choose language, theme, and default categories.",
+  "addDefaultCategories": "Add default categories",
+  "addDefaultCategoriesDescription": "Imports categories with matching subcategories.",
+  "saving": "Saving...",
+  "continueLabel": "Continue"
 }

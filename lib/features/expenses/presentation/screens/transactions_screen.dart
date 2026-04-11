@@ -252,6 +252,10 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               previous == null ||
                               previous.date.year != expense.date.year ||
                               previous.date.month != expense.date.month;
+                          final monthSummary = _buildMonthSummary(
+                            filtered,
+                            index,
+                          );
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -264,11 +268,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                                     6,
                                   ),
                                   child: Text(
-                                    DateFormat.yMMMM(
-                                      Localizations.localeOf(
-                                        context,
-                                      ).toString(),
-                                    ).format(expense.date),
+                                    _monthHeaderLabel(
+                                      context,
+                                      expense.date,
+                                      monthSummary,
+                                      currencySymbol,
+                                    ),
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleSmall
@@ -309,6 +314,41 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
         ],
       ),
     );
+  }
+
+  _MonthSummary _buildMonthSummary(List<ExpenseEntity> expenses, int index) {
+    final expense = expenses[index];
+    var flexCents = 0;
+    var fixedCents = 0;
+
+    for (final entry in expenses) {
+      if (entry.date.year != expense.date.year ||
+          entry.date.month != expense.date.month) {
+        continue;
+      }
+      if (entry.isRecurring) {
+        fixedCents += entry.amountCents;
+      } else {
+        flexCents += entry.amountCents;
+      }
+    }
+
+    return _MonthSummary(flexCents: flexCents, fixedCents: fixedCents);
+  }
+
+  String _monthHeaderLabel(
+    BuildContext context,
+    DateTime month,
+    _MonthSummary summary,
+    String currencySymbol,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final monthLabel = DateFormat.yMMMM(
+      Localizations.localeOf(context).toString(),
+    ).format(month);
+    final flexLabel = l10n?.flexShort ?? 'Flex';
+    final fixedLabel = l10n?.fixedShort ?? 'Fix';
+    return '$monthLabel ($flexLabel: ${formatAmount(summary.flexCents, symbol: currencySymbol)}, $fixedLabel: ${formatAmount(summary.fixedCents, symbol: currencySymbol)})';
   }
 
   List<ExpenseEntity> _applyFilters(
@@ -857,6 +897,7 @@ class _ExpenseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: category != null
@@ -872,7 +913,30 @@ class _ExpenseTile extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text('$categoryPath · ${dateFormat.format(expense.date)}'),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(categoryPath),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(dateFormat.format(expense.date)),
+              if (expense.isRecurring) ...[
+                const SizedBox(width: 6),
+                Tooltip(
+                  message: l10n?.recurringGenerated ?? 'Wiederkehrend erzeugt',
+                  child: Icon(
+                    Icons.repeat,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
       trailing: Text(
         formatAmount(expense.amountCents, symbol: currencySymbol),
         style: Theme.of(
@@ -883,4 +947,11 @@ class _ExpenseTile extends StatelessWidget {
       onLongPress: onDelete,
     );
   }
+}
+
+class _MonthSummary {
+  final int flexCents;
+  final int fixedCents;
+
+  const _MonthSummary({required this.flexCents, required this.fixedCents});
 }

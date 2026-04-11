@@ -31,7 +31,6 @@ class StatisticsScreen extends ConsumerWidget {
         ? ref.watch(spendingByCategoryProvider)
         : ref.watch(subcategorySpendingProvider(parentCategoryId));
     final categoriesAsync = ref.watch(allCategoriesProvider);
-    final summaryAsync = ref.watch(spendingSummaryProvider);
     final selectedCategoryId = subcategoryId ?? parentCategoryId;
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final (start, end) = ref.watch(statsDateRangeProvider);
@@ -163,31 +162,58 @@ class StatisticsScreen extends ConsumerWidget {
                     icon: const Icon(Icons.arrow_back),
                     label: Text(l10n?.allCategories ?? 'Alle Kategorien'),
                   ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: categoriesAsync.when(
+                      data: (categories) {
+                        final activeLabel = _activeFilterLabel(
+                          categories,
+                          parentCategoryId: parentCategoryId,
+                          subcategoryId: subcategoryId,
+                        );
+                        if (activeLabel == null) {
+                          return const SizedBox.shrink();
+                        }
+                        return Align(
+                          alignment: Alignment.centerLeft,
+                          child: Chip(label: Text(activeLabel)),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ),
                 ],
               ),
             ),
 
           // Summary numbers.
-          summaryAsync.when(
-            data: (summary) => Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _StatCard(
-                    label: l10n?.totalSpent ?? 'Gesamt',
-                    value: formatAmount(
-                      summary.totalCents.abs(),
-                      symbol: currencySymbol,
+          filteredExpensesAsync.when(
+            data: (expenses) {
+              final totalCents = expenses.fold<int>(
+                0,
+                (sum, expense) => sum + expense.amountCents,
+              );
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _StatCard(
+                      label: l10n?.totalSpent ?? 'Gesamt',
+                      value: formatAmount(
+                        totalCents.abs(),
+                        symbol: currencySymbol,
+                      ),
                     ),
-                  ),
-                  _StatCard(
-                    label: l10n?.transactions ?? 'Transaktionen',
-                    value: summary.transactionCount.toString(),
-                  ),
-                ],
-              ),
-            ),
+                    _StatCard(
+                      label: l10n?.transactions ?? 'Transaktionen',
+                      value: expenses.length.toString(),
+                    ),
+                  ],
+                ),
+              );
+            },
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
@@ -295,6 +321,17 @@ class StatisticsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String? _activeFilterLabel(
+    List<CategoryEntity> categories, {
+    required int? parentCategoryId,
+    required int? subcategoryId,
+  }) {
+    final activeId = subcategoryId ?? parentCategoryId;
+    if (activeId == null) return null;
+    final category = categories.where((c) => c.id == activeId).firstOrNull;
+    return category?.name;
   }
 
   void _openTransactions(

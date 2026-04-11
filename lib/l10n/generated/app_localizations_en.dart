@@ -246,4 +246,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clearFilter => 'Clear filter';
+
+  @override
+  String get fixedShort => 'Fix';
+
+  @override
+  String get flexShort => 'Flex';
+
+  @override
+  String get recurringGenerated => 'Generated from recurring rule';
+
+  @override
+  String get setupTitle => 'Setup';
+
+  @override
+  String get setupDescription =>
+      'Please choose language, theme, and default categories.';
+
+  @override
+  String get addDefaultCategories => 'Add default categories';
+
+  @override
+  String get addDefaultCategoriesDescription =>
+      'Imports categories with matching subcategories.';
+
+  @override
+  String get saving => 'Saving...';
+
+  @override
+  String get continueLabel => 'Continue';
 }

@@ -10,7 +10,7 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 - **Two-step category selection** via a consistent modal picker (parent -> subcategory) across Home, Recurring, and Transactions edit flows
 - **Recurring expenses** (monthly/yearly) with live next-date preview during create/edit and a "generate now" button
 - **Interactive statistics** with pie drill-down (parent -> subcategory), clickable legend jump-to-transactions, icon badges for major slices, and stacked category-colored bars
-- **Transactions view** with month separators, transaction count, and category path display
+- **Transactions view** with month separators including flexible vs fixed monthly totals, transaction count, category path display, and recurring-entry badges
 - **Transactions filters** with the same modal category picker and explicit "All categories" reset option
 - **Category management** with transaction counts per category
 - **CSV/JSON export & import**:
@@ -22,7 +22,7 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 - **Smart suggestions split actions**: left click applies description+category, right click applies description+category+amount
 - **Expanded category icon set** (more than doubled) for finer visual categorization
 - **Localization** in German (default) and English
-- **OLED-friendly dark theme** (true black scaffold, slightly elevated surfaces)
+- **Centralized theme tokens** for easier future theme variants, including an OLED-friendly dark theme
 - **Android navigation** improved to properly handle back button within app hierarchy
 
 ## Contributing & Philosophy
@@ -120,12 +120,16 @@ flutter run
 ### Build
 
 ```bash
-# Android APK
-flutter build apk --release
+# Local Android APK with debug signing
+flutter build apk --debug
 
 # Web
 flutter build web --release
 ```
+
+For local device installs, prefer the debug-signed APK above. Release-signed Android artifacts are built through the GitHub `release.yml` workflow so the real signing key can stay outside local machines.
+
+If you need a full release build pipeline, see [docs/signing-setup.md](docs/signing-setup.md).
 
 ## Testing
 
@@ -153,6 +157,8 @@ flutter test integration_test/app_test.dart
 2. Translate all keys
 3. Run `flutter gen-l10n`
 4. Add the locale to the currency/language picker in Settings
+
+For the longer-term scaling plan around translations, placeholders, review flow, and release checks, see [docs/i18n-plan.md](docs/i18n-plan.md).
 
 ## CI
 

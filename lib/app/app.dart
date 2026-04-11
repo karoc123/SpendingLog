@@ -12,10 +12,9 @@ import 'package:local_auth/local_auth.dart';
 import '../core/database/app_database.dart';
 import '../core/providers/core_providers.dart';
 import '../l10n/generated/app_localizations.dart';
+import 'onboarding_gate.dart';
 import 'router.dart';
 import 'theme.dart';
-
-const _requiredOnboardingVersion = '1';
 
 class SpendingLogApp extends ConsumerStatefulWidget {
   const SpendingLogApp({super.key});
@@ -33,7 +32,6 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
   bool _isLocked = false;
   bool _isAuthenticating = false;
   bool _didColdStartCheck = false;
-  bool _isOnboardingRunning = false;
 
   @override
   void initState() {
@@ -53,7 +51,6 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkBiometricLockRequirement(isColdStart: true);
-      _ensureOnboardingCompleted();
     });
   }
 
@@ -128,62 +125,11 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
 
       if (ok && mounted) {
         setState(() => _isLocked = false);
-        await _ensureOnboardingCompleted();
       }
     } catch (_) {
       // Keep locked on failure.
     } finally {
       _isAuthenticating = false;
-    }
-  }
-
-  Future<void> _ensureOnboardingCompleted() async {
-    if (!mounted || _isLocked || _isOnboardingRunning) return;
-
-    final getSetting = ref.read(getSettingProvider);
-    final updateSetting = ref.read(updateSettingProvider);
-
-    final onboardingCompleted =
-        (await getSetting.call('onboarding_completed')) == 'true';
-    final onboardingVersion = await getSetting.call('onboarding_version');
-    final needsOnboarding =
-        !onboardingCompleted || onboardingVersion != _requiredOnboardingVersion;
-    if (!needsOnboarding || !mounted) {
-      return;
-    }
-
-    _isOnboardingRunning = true;
-    try {
-      final localeSetting =
-          await getSetting.call('locale') ??
-          WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-      final themeSetting = await getSetting.call('theme_mode') ?? 'system';
-
-      final result = await _showOnboardingDialog(
-        localeCode: localeSetting == 'en' ? 'en' : 'de',
-        themeMode: _normalizeThemeMode(themeSetting),
-      );
-
-      if (!mounted || result == null) return;
-
-      await updateSetting.call('locale', result.localeCode);
-      await updateSetting.call('theme_mode', result.themeMode);
-
-      if (result.importDefaultCategories) {
-        final db = ref.read(databaseProvider);
-        final hasCategories = (await db.getAllCategories()).isNotEmpty;
-        if (!hasCategories) {
-          await _seedDefaultCategories(db, result.localeCode);
-        }
-      }
-
-      await updateSetting.call(
-        'onboarding_version',
-        _requiredOnboardingVersion,
-      );
-      await updateSetting.call('onboarding_completed', 'true');
-    } finally {
-      _isOnboardingRunning = false;
     }
   }
 
@@ -259,141 +205,13 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
     return 'system';
   }
 
-  Future<_OnboardingResult?> _showOnboardingDialog({
-    required String localeCode,
-    required String themeMode,
-  }) {
-    var selectedLocale = localeCode;
-    var selectedTheme = themeMode;
-    var importDefaults = true;
-
-    String t(String de, String en) {
-      return selectedLocale == 'en' ? en : de;
-    }
-
-    return showDialog<_OnboardingResult>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: Text(t('Einrichtung', 'Setup')),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      t(
-                        'Bitte waehle Sprache, Theme und Standardkategorien.',
-                        'Please choose language, theme, and default categories.',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      t('Sprache', 'Language'),
-                      style: Theme.of(ctx).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment<String>(
-                          value: 'de',
-                          label: Text('Deutsch'),
-                        ),
-                        ButtonSegment<String>(
-                          value: 'en',
-                          label: Text('English'),
-                        ),
-                      ],
-                      selected: {selectedLocale},
-                      onSelectionChanged: (selection) {
-                        setDialogState(() {
-                          selectedLocale = selection.first;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      t('Theme', 'Theme'),
-                      style: Theme.of(ctx).textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    SegmentedButton<String>(
-                      segments: [
-                        ButtonSegment<String>(
-                          value: 'system',
-                          label: Text(t('System', 'System')),
-                        ),
-                        ButtonSegment<String>(
-                          value: 'light',
-                          label: Text(t('Hell', 'Light')),
-                        ),
-                        ButtonSegment<String>(
-                          value: 'dark',
-                          label: Text(t('Dunkel', 'Dark')),
-                        ),
-                      ],
-                      selected: {selectedTheme},
-                      onSelectionChanged: (selection) {
-                        setDialogState(() {
-                          selectedTheme = selection.first;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    CheckboxListTile(
-                      value: importDefaults,
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(
-                        t(
-                          'Standardkategorien hinzufuegen',
-                          'Add default categories',
-                        ),
-                      ),
-                      subtitle: Text(
-                        t(
-                          'Importiert Kategorien mit passenden Unterkategorien.',
-                          'Imports categories with matching subcategories.',
-                        ),
-                      ),
-                      onChanged: (value) {
-                        setDialogState(() {
-                          importDefaults = value ?? false;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop(
-                      _OnboardingResult(
-                        localeCode: selectedLocale,
-                        themeMode: selectedTheme,
-                        importDefaultCategories: importDefaults,
-                      ),
-                    );
-                  },
-                  child: Text(t('Weiter', 'Continue')),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeAsync = ref.watch(themeModeSettingProvider);
     final localeAsync = ref.watch(localeSettingProvider);
     final biometricsEnabled =
         ref.watch(biometricsEnabledProvider).value ?? false;
+    final shouldShowOnboarding = ref.watch(needsOnboardingProvider);
 
     final themeModeStr = themeAsync.value ?? 'system';
     final themeMode = switch (themeModeStr) {
@@ -421,69 +239,94 @@ class _SpendingLogAppState extends ConsumerState<SpendingLogApp>
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: appRouter,
       builder: (context, child) {
-        if (!biometricsEnabled || !_isLocked || kIsWeb) {
-          return child ?? const SizedBox.shrink();
+        final content = child ?? const SizedBox.shrink();
+
+        if (biometricsEnabled && _isLocked && !kIsWeb) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              content,
+              ColoredBox(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock, size: 40),
+                        const SizedBox(height: 12),
+                        Text(
+                          AppLocalizations.of(context)?.biometricAuth ??
+                              'Biometrische Authentifizierung',
+                          style: Theme.of(context).textTheme.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          AppLocalizations.of(context)?.biometricReason ??
+                              'Bitte authentifizieren Sie sich',
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          onPressed: _isAuthenticating
+                              ? null
+                              : () => _authenticateAndUnlock(),
+                          icon: const Icon(Icons.fingerprint),
+                          label: Text(
+                            _isAuthenticating
+                                ? 'Authentifizierung...'
+                                : (AppLocalizations.of(
+                                        context,
+                                      )?.biometricAuth ??
+                                      'Authentifizieren'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        if (!shouldShowOnboarding) {
+          return content;
         }
 
         return Stack(
           fit: StackFit.expand,
           children: [
-            child ?? const SizedBox.shrink(),
-            ColoredBox(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.lock, size: 40),
-                      const SizedBox(height: 12),
-                      Text(
-                        AppLocalizations.of(context)?.biometricAuth ??
-                            'Biometrische Authentifizierung',
-                        style: Theme.of(context).textTheme.titleMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        AppLocalizations.of(context)?.biometricReason ??
-                            'Bitte authentifizieren Sie sich',
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _isAuthenticating
-                            ? null
-                            : () => _authenticateAndUnlock(),
-                        icon: const Icon(Icons.fingerprint),
-                        label: Text(
-                          _isAuthenticating
-                              ? 'Authentifizierung...'
-                              : (AppLocalizations.of(context)?.biometricAuth ??
-                                    'Authentifizieren'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            content,
+            OnboardingGate(
+              initialLocaleCode: localeStr == 'en' ? 'en' : 'de',
+              initialThemeMode: _normalizeThemeMode(themeModeStr),
+              onComplete: (result) async {
+                final updateSetting = ref.read(updateSettingProvider);
+                await updateSetting.call('locale', result.localeCode);
+                await updateSetting.call('theme_mode', result.themeMode);
+
+                if (result.importDefaultCategories) {
+                  final db = ref.read(databaseProvider);
+                  final hasCategories =
+                      (await db.getAllCategories()).isNotEmpty;
+                  if (!hasCategories) {
+                    await _seedDefaultCategories(db, result.localeCode);
+                  }
+                }
+
+                await updateSetting.call(
+                  'onboarding_version',
+                  requiredOnboardingVersion,
+                );
+                await updateSetting.call('onboarding_completed', 'true');
+              },
             ),
           ],
         );
       },
     );
   }
-}
-
-class _OnboardingResult {
-  final String localeCode;
-  final String themeMode;
-  final bool importDefaultCategories;
-
-  const _OnboardingResult({
-    required this.localeCode,
-    required this.themeMode,
-    required this.importDefaultCategories,
-  });
 }

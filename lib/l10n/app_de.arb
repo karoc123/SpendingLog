@@ -86,5 +86,14 @@
   "searchTransactions": "Suchen…",
   "filterCategory": "Kategorie",
   "allCategories": "Alle",
-  "clearFilter": "Filter zurücksetzen"
+  "clearFilter": "Filter zurücksetzen",
+  "fixedShort": "Fix",
+  "flexShort": "Flex",
+  "recurringGenerated": "Wiederkehrend erzeugt",
+  "setupTitle": "Einrichtung",
+  "setupDescription": "Bitte wähle Sprache, Theme und Standardkategorien.",
+  "addDefaultCategories": "Standardkategorien hinzufügen",
+  "addDefaultCategoriesDescription": "Importiert Kategorien mit passenden Unterkategorien.",
+  "saving": "Speichere...",
+  "continueLabel": "Weiter"
 }

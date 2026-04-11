@@ -75,11 +75,47 @@ void main() {
 
   testWidgets('StatisticsScreen shows total amount', (tester) async {
     await tester.pumpWidget(
-      buildTestApp(const StatisticsScreen(), overrides: buildOverrides()),
+      buildTestApp(
+        const StatisticsScreen(),
+        overrides: [
+          ...buildOverrides(),
+          filteredStatsExpensesProvider.overrideWith((ref, filter) async {
+            return [
+              makeExpense(id: 'sum-1', amountCents: 5000, categoryId: 1),
+              makeExpense(id: 'sum-2', amountCents: 2000, categoryId: 2),
+            ];
+          }),
+        ],
+      ),
     );
     await tester.pump(const Duration(seconds: 1));
 
     // 7000 cents = 70.00, should appear somewhere
     expect(find.textContaining('70'), findsWidgets);
+  });
+
+  testWidgets('StatisticsScreen shows filtered total, count and active label', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const StatisticsScreen(),
+        overrides: [
+          ...buildOverrides(),
+          filteredStatsExpensesProvider.overrideWith((ref, filter) async {
+            return [
+              makeExpense(id: 'filtered-1', amountCents: 5000, categoryId: 1),
+              makeExpense(id: 'filtered-2', amountCents: 2500, categoryId: 1),
+            ];
+          }),
+          selectedParentChartCategoryProvider.overrideWith((ref) => 1),
+        ],
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Lebensmittel'), findsWidgets);
+    expect(find.textContaining('75'), findsWidgets);
+    expect(find.text('2'), findsWidgets);
   });
 }

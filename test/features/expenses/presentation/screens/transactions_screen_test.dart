@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,6 +24,15 @@ void main() {
       description: 'Latte',
       categoryId: 2,
       amountCents: 450,
+      date: DateTime(2026, 5, 12),
+    ),
+    makeExpense(
+      id: 'e2',
+      description: 'Miete',
+      categoryId: 1,
+      amountCents: 20000,
+      date: DateTime(2026, 5, 3),
+      recurringExpenseId: 'rule-1',
     ),
   ];
 
@@ -46,7 +56,22 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Alle'), findsWidgets);
-      expect(find.text('Lebensmittel'), findsOneWidget);
+      expect(find.text('Lebensmittel'), findsWidgets);
+    },
+  );
+
+  testWidgets(
+    'TransactionsScreen shows month flex/fix summary and recurring badge',
+    (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(const TransactionsScreen(), overrides: buildOverrides()),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('2026'), findsWidgets);
+      expect(find.textContaining('Flex:'), findsOneWidget);
+      expect(find.textContaining('Fix:'), findsOneWidget);
+      expect(find.byIcon(Icons.repeat), findsOneWidget);
     },
   );
 }

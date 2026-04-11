@@ -33,6 +33,8 @@ import '../../features/settings/domain/usecases/import_csv_monekin.dart';
 import '../../features/settings/domain/usecases/import_csv_dkb.dart';
 import '../../features/settings/domain/usecases/update_setting.dart';
 
+const requiredOnboardingVersion = '1';
+
 // ---------------------------------------------------------------------------
 // Database
 // ---------------------------------------------------------------------------
@@ -236,4 +238,25 @@ final themeModeSettingProvider = StreamProvider<String>((ref) {
       .watch(settingsRepositoryProvider)
       .watchSetting('theme_mode')
       .map((v) => v ?? 'system');
+});
+
+final onboardingCompletedProvider = StreamProvider<bool>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watchSetting('onboarding_completed')
+      .map((v) => v == 'true');
+});
+
+final onboardingVersionProvider = StreamProvider<String>((ref) {
+  return ref
+      .watch(settingsRepositoryProvider)
+      .watchSetting('onboarding_version')
+      .map((v) => v ?? '0');
+});
+
+final needsOnboardingProvider = Provider<bool>((ref) {
+  final onboardingCompleted =
+      ref.watch(onboardingCompletedProvider).value ?? false;
+  final onboardingVersion = ref.watch(onboardingVersionProvider).value ?? '0';
+  return !onboardingCompleted || onboardingVersion != requiredOnboardingVersion;
 });

@@ -571,6 +571,60 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Filter zurücksetzen'**
   String get clearFilter;
+
+  /// No description provided for @fixedShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Fix'**
+  String get fixedShort;
+
+  /// No description provided for @flexShort.
+  ///
+  /// In de, this message translates to:
+  /// **'Flex'**
+  String get flexShort;
+
+  /// No description provided for @recurringGenerated.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederkehrend erzeugt'**
+  String get recurringGenerated;
+
+  /// No description provided for @setupTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Einrichtung'**
+  String get setupTitle;
+
+  /// No description provided for @setupDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Bitte wähle Sprache, Theme und Standardkategorien.'**
+  String get setupDescription;
+
+  /// No description provided for @addDefaultCategories.
+  ///
+  /// In de, this message translates to:
+  /// **'Standardkategorien hinzufügen'**
+  String get addDefaultCategories;
+
+  /// No description provided for @addDefaultCategoriesDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Importiert Kategorien mit passenden Unterkategorien.'**
+  String get addDefaultCategoriesDescription;
+
+  /// No description provided for @saving.
+  ///
+  /// In de, this message translates to:
+  /// **'Speichere...'**
+  String get saving;
+
+  /// No description provided for @continueLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Weiter'**
+  String get continueLabel;
 }
 
 class _AppLocalizationsDelegate
