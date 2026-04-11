@@ -54,9 +54,9 @@ jobs:
           # just 'upload-keystore.jks' — no subdirectory prefix.
           printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
             "$STORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" \
-            > android/key.properties
+            > android/app/key.properties
 
-          echo "::notice::android/key.properties written"
+          echo "::notice::android/app/key.properties written"
 
       - name: Build APK
         run: |
