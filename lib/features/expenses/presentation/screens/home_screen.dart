@@ -232,7 +232,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
 
           // Recent expenses list (scrollable top).
@@ -336,7 +336,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 categoriesAsync.when(
                   data: (categories) => _buildCategoryPickerField(categories),
                   loading: () => const LinearProgressIndicator(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
 
                 const SizedBox(height: 12),
@@ -741,7 +741,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           );
                         },
                         loading: () => const CircularProgressIndicator(),
-                        error: (_, __) => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
                       ),
                       const SizedBox(height: 12),
                       Row(

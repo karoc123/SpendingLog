@@ -180,7 +180,7 @@ class StatisticsScreen extends ConsumerWidget {
                         );
                       },
                       loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                      error: (_, _) => const SizedBox.shrink(),
                     ),
                   ),
                 ],
@@ -215,7 +215,7 @@ class StatisticsScreen extends ConsumerWidget {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
 
           const SizedBox(height: 8),
@@ -361,7 +361,7 @@ class StatisticsScreen extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
       child: ListView.separated(
         itemCount: spending.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 6),
+        separatorBuilder: (_, _) => const SizedBox(height: 6),
         itemBuilder: (context, index) {
           final cs = spending[index];
           return InkWell(

@@ -37,8 +37,9 @@ class FakeSettingsRepository implements SettingsRepository {
   @override
   Future<void> setSetting(String key, String value) async {
     _values[key] = value;
-    _controllers.putIfAbsent(key, () => StreamController<String?>.broadcast())
-      ..add(value);
+    _controllers
+        .putIfAbsent(key, () => StreamController<String?>.broadcast())
+        .add(value);
   }
 
   @override
