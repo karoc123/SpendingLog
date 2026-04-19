@@ -34,6 +34,7 @@ class StatisticsScreen extends ConsumerWidget {
     final selectedCategoryId = subcategoryId ?? parentCategoryId;
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final (start, end) = ref.watch(statsDateRangeProvider);
+
     final filteredExpensesAsync = ref.watch(
       filteredStatsExpensesProvider((
         start: start,
@@ -491,8 +492,9 @@ class _SpendingBarChart extends StatelessWidget {
         children: [
           Text(
             viewMode == StatsViewMode.monthly
-                ? 'Tagesverlauf'
-                : 'Monatsverlauf',
+                ? (AppLocalizations.of(context)?.dailyTrend ?? 'Daily trend')
+                : (AppLocalizations.of(context)?.monthlyTrend ??
+                      'Monthly trend'),
             style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 8),

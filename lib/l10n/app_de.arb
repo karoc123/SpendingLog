@@ -95,5 +95,9 @@
   "addDefaultCategories": "Standardkategorien hinzufügen",
   "addDefaultCategoriesDescription": "Importiert Kategorien mit passenden Unterkategorien.",
   "saving": "Speichere...",
-  "continueLabel": "Weiter"
+  "continueLabel": "Weiter",
+
+  "dailyTrend": "Tagesverlauf",
+  "monthlyTrend": "Monatsverlauf",
+  "noChartData": "Keine Daten"
 }

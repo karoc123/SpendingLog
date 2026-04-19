@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
+import '../../../expenses/presentation/providers/expense_providers.dart';
 import '../../domain/usecases/get_spending_by_category.dart';
 import '../../domain/usecases/get_spending_summary.dart';
 
@@ -74,14 +75,20 @@ final filteredStatsExpensesProvider =
     FutureProvider.family<List<ExpenseEntity>, StatsExpenseFilter>((
       ref,
       filter,
-    ) {
+    ) async {
       final getExpenses = ref.watch(getExpensesProvider);
-      if (filter.categoryId != null) {
-        return getExpenses.byCategory(
-          filter.categoryId!,
-          filter.start,
-          filter.end,
-        );
+      if (filter.categoryId == null) {
+        return getExpenses.inRange(filter.start, filter.end);
       }
-      return getExpenses.inRange(filter.start, filter.end);
+      // Resolve the full category subtree (parent + its subcategories) so
+      // that selecting a parent category includes all subcategory expenses.
+      final categories = await ref.watch(allCategoriesProvider.future);
+      final relevantIds =
+          categories
+              .where((c) => c.parentId == filter.categoryId)
+              .map((c) => c.id)
+              .toSet()
+            ..add(filter.categoryId!);
+      final expenses = await getExpenses.inRange(filter.start, filter.end);
+      return expenses.where((e) => relevantIds.contains(e.categoryId)).toList();
     });

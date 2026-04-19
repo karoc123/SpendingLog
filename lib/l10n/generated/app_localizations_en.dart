@@ -275,4 +275,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get continueLabel => 'Continue';
+
+  @override
+  String get dailyTrend => 'Daily trend';
+
+  @override
+  String get monthlyTrend => 'Monthly trend';
+
+  @override
+  String get noChartData => 'No data';
 }

@@ -95,5 +95,9 @@
   "addDefaultCategories": "Add default categories",
   "addDefaultCategoriesDescription": "Imports categories with matching subcategories.",
   "saving": "Saving...",
-  "continueLabel": "Continue"
+  "continueLabel": "Continue",
+
+  "dailyTrend": "Daily trend",
+  "monthlyTrend": "Monthly trend",
+  "noChartData": "No data"
 }

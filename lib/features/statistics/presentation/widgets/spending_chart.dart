@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/utils/icon_map.dart';
+import '../../../../l10n/generated/app_localizations.dart';
 import '../../domain/usecases/get_spending_by_category.dart';
 
 class SpendingChart extends StatelessWidget {
@@ -19,7 +20,12 @@ class SpendingChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (spending.isEmpty) {
-      return SizedBox(height: 200, child: Center(child: Text('Keine Daten')));
+      return SizedBox(
+        height: 200,
+        child: Center(
+          child: Text(AppLocalizations.of(context)?.noChartData ?? 'No data'),
+        ),
+      );
     }
 
     final totalAbs = spending.fold<int>(0, (s, c) => s + c.totalCents.abs());

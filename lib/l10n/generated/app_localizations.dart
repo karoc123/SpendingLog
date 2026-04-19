@@ -625,6 +625,24 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Weiter'**
   String get continueLabel;
+
+  /// No description provided for @dailyTrend.
+  ///
+  /// In de, this message translates to:
+  /// **'Tagesverlauf'**
+  String get dailyTrend;
+
+  /// No description provided for @monthlyTrend.
+  ///
+  /// In de, this message translates to:
+  /// **'Monatsverlauf'**
+  String get monthlyTrend;
+
+  /// No description provided for @noChartData.
+  ///
+  /// In de, this message translates to:
+  /// **'Keine Daten'**
+  String get noChartData;
 }
 
 class _AppLocalizationsDelegate

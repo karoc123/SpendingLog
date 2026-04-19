@@ -277,4 +277,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get continueLabel => 'Weiter';
+
+  @override
+  String get dailyTrend => 'Tagesverlauf';
+
+  @override
+  String get monthlyTrend => 'Monatsverlauf';
+
+  @override
+  String get noChartData => 'Keine Daten';
 }
