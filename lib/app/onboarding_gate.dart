@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../l10n/generated/app_localizations.dart';
-
 class OnboardingResult {
   final String localeCode;
   final String themeMode;
@@ -33,24 +31,17 @@ class OnboardingGate extends StatefulWidget {
 class _OnboardingGateState extends State<OnboardingGate> {
   late String _selectedLocale;
   late String _selectedTheme;
-  bool _importDefaults = true;
+  bool _importDefaults = false;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedLocale = widget.initialLocaleCode;
+    _selectedLocale = widget.initialLocaleCode == 'de' ? 'de' : 'en';
     _selectedTheme = widget.initialThemeMode;
   }
 
-  AppLocalizations? get _l10n => AppLocalizations.of(context);
-
-  String _text({
-    required String deFallback,
-    required String enFallback,
-    String? localized,
-  }) {
-    if (localized != null && localized.isNotEmpty) return localized;
+  String _text({required String deFallback, required String enFallback}) {
     return _selectedLocale == 'en' ? enFallback : deFallback;
   }
 
@@ -70,11 +61,7 @@ class _OnboardingGateState extends State<OnboardingGate> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _text(
-                      deFallback: 'Einrichtung',
-                      enFallback: 'Setup',
-                      localized: _l10n?.setupTitle,
-                    ),
+                    _text(deFallback: 'Einrichtung', enFallback: 'Setup'),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 12),
@@ -84,13 +71,11 @@ class _OnboardingGateState extends State<OnboardingGate> {
                           'Bitte waehle Sprache, Theme und Standardkategorien.',
                       enFallback:
                           'Please choose language, theme, and default categories.',
-                      localized: _l10n?.setupDescription,
                     ),
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    _l10n?.language ??
-                        _text(deFallback: 'Sprache', enFallback: 'Language'),
+                    _text(deFallback: 'Sprache', enFallback: 'Language'),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
@@ -116,8 +101,7 @@ class _OnboardingGateState extends State<OnboardingGate> {
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    _l10n?.themeMode ??
-                        _text(deFallback: 'Theme', enFallback: 'Theme'),
+                    _text(deFallback: 'Theme', enFallback: 'Theme'),
                     style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
@@ -126,22 +110,19 @@ class _OnboardingGateState extends State<OnboardingGate> {
                       ButtonSegment<String>(
                         value: 'system',
                         label: Text(
-                          _l10n?.system ??
-                              _text(deFallback: 'System', enFallback: 'System'),
+                          _text(deFallback: 'System', enFallback: 'System'),
                         ),
                       ),
                       ButtonSegment<String>(
                         value: 'light',
                         label: Text(
-                          _l10n?.light ??
-                              _text(deFallback: 'Hell', enFallback: 'Light'),
+                          _text(deFallback: 'Hell', enFallback: 'Light'),
                         ),
                       ),
                       ButtonSegment<String>(
                         value: 'dark',
                         label: Text(
-                          _l10n?.dark ??
-                              _text(deFallback: 'Dunkel', enFallback: 'Dark'),
+                          _text(deFallback: 'Dunkel', enFallback: 'Dark'),
                         ),
                       ),
                     ],
@@ -162,7 +143,6 @@ class _OnboardingGateState extends State<OnboardingGate> {
                       _text(
                         deFallback: 'Standardkategorien hinzufügen',
                         enFallback: 'Add default categories',
-                        localized: _l10n?.addDefaultCategories,
                       ),
                     ),
                     subtitle: Text(
@@ -171,7 +151,6 @@ class _OnboardingGateState extends State<OnboardingGate> {
                             'Importiert Kategorien mit passenden Unterkategorien.',
                         enFallback:
                             'Imports categories with matching subcategories.',
-                        localized: _l10n?.addDefaultCategoriesDescription,
                       ),
                     ),
                     onChanged: _isSaving
@@ -209,12 +188,10 @@ class _OnboardingGateState extends State<OnboardingGate> {
                             ? _text(
                                 deFallback: 'Speichere...',
                                 enFallback: 'Saving...',
-                                localized: _l10n?.saving,
                               )
                             : _text(
                                 deFallback: 'Weiter',
                                 enFallback: 'Continue',
-                                localized: _l10n?.continueLabel,
                               ),
                       ),
                     ),

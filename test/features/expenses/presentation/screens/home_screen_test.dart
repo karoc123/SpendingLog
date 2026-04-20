@@ -164,6 +164,52 @@ void main() {
     );
   });
 
+  testWidgets('HomeScreen focuses description field on launch', (tester) async {
+    await tester.pumpWidget(
+      buildTestApp(const HomeScreen(), overrides: buildOverrides()),
+    );
+    await tester.pumpAndSettle();
+
+    final descriptionField = tester.widget<TextField>(
+      find.byType(TextField).at(2),
+    );
+    expect(descriptionField.focusNode?.hasFocus, isTrue);
+  });
+
+  testWidgets('HomeScreen shows category actions when no categories exist', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const HomeScreen(),
+        overrides: [
+          expenseListProvider.overrideWith((ref) => Stream.value(testExpenses)),
+          currentMonthExpensesProvider.overrideWith(
+            (ref) => Stream.value(testExpenses),
+          ),
+          autocompleteSuggestionsProvider.overrideWith((ref, query) async {
+            return const [];
+          }),
+          committedAmountProvider.overrideWith((ref) async => 0),
+          currencySymbolProvider.overrideWith((ref) => Stream.value('€')),
+          addExpenseProvider.overrideWithValue(mockAddExpense),
+          deleteExpenseProvider.overrideWithValue(mockDeleteExpense),
+          updateExpenseProvider.overrideWithValue(mockUpdateExpense),
+          allCategoriesProvider.overrideWith((ref) => Stream.value([])),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Standardkategorien hinzufügen').evaluate().isNotEmpty ||
+          find.text('Add default categories').evaluate().isNotEmpty,
+      isTrue,
+    );
+    expect(find.text('Kategorien verwalten'), findsOneWidget);
+    expect(find.text('Betrag'), findsNothing);
+  });
+
   testWidgets('Home suggestions split left/right amount behavior', (
     tester,
   ) async {

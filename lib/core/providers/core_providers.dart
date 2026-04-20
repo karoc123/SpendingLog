@@ -223,7 +223,7 @@ final localeSettingProvider = StreamProvider<String>((ref) {
   return ref
       .watch(settingsRepositoryProvider)
       .watchSetting('locale')
-      .map((v) => v ?? 'de');
+      .map((v) => v ?? 'en');
 });
 
 final biometricsEnabledProvider = StreamProvider<bool>((ref) {

@@ -278,40 +278,40 @@ class SettingsScreen extends ConsumerWidget {
     WidgetRef ref,
     bool enable,
   ) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
     if (enable) {
       final auth = LocalAuthentication();
       try {
         final canAuth = await auth.canCheckBiometrics;
         final isDeviceSupported = await auth.isDeviceSupported();
         if (!canAuth || !isDeviceSupported) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(context)?.biometricsNotAvailable ??
-                      'Biometrische Authentifizierung nicht verfügbar',
-                ),
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                l10n?.biometricsNotAvailable ??
+                    'Biometric authentication not available',
               ),
-            );
-          }
+            ),
+          );
           return;
         }
+        if (!context.mounted) return;
         final authenticated = await auth.authenticate(
-          localizedReason:
-              AppLocalizations.of(context)?.biometricReason ??
-              'Biometrie aktivieren',
+          localizedReason: l10n?.biometricReason ?? 'Please authenticate',
         );
         if (!authenticated) return;
       } catch (e) {
         // Copy full error to clipboard
         final errorText = e.toString();
         await Clipboard.setData(ClipboardData(text: errorText));
-
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Fehler kopiert in Zwischenablage')),
-          );
-        }
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n?.errorCopiedClipboard ?? 'Error copied to clipboard',
+            ),
+          ),
+        );
         return;
       }
     }

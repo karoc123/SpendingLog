@@ -118,7 +118,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: navigationShell.currentIndex == 0,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop && navigationShell.currentIndex != 0) {
           // If we can't pop (not at home tab), go to home tab instead.
           navigationShell.goBranch(0, initialLocation: true);

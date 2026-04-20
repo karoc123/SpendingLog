@@ -286,4 +286,36 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noChartData => 'Keine Daten';
+
+  @override
+  String get category => 'Kategorie';
+
+  @override
+  String get includeAmountLabel => 'inkl. Betrag';
+
+  @override
+  String get generateExpenseNow => 'Jetzt erzeugen';
+
+  @override
+  String get expenseGeneratedNow => 'Ausgabe sofort erzeugt';
+
+  @override
+  String get startDateValidationFuture =>
+      'Startdatum muss heute oder in der Zukunft liegen';
+
+  @override
+  String get exportFailed => 'Export fehlgeschlagen';
+
+  @override
+  String get importFailed => 'Import fehlgeschlagen';
+
+  @override
+  String get importRoutineTitle => 'Import-Routine wählen';
+
+  @override
+  String get importRoutinePrompt =>
+      'Welches CSV-Format soll importiert werden?';
+
+  @override
+  String get errorCopiedClipboard => 'Fehler in Zwischenablage kopiert';
 }

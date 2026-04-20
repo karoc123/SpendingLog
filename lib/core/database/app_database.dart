@@ -94,7 +94,7 @@ class AppDatabase extends _$AppDatabase {
     final defaults = <Map<String, String>>[
       {'key': 'currency', 'value': 'EUR'},
       {'key': 'currency_symbol', 'value': '€'},
-      {'key': 'locale', 'value': 'de'},
+      {'key': 'locale', 'value': 'en'},
       {'key': 'biometrics_enabled', 'value': 'false'},
       {'key': 'theme_mode', 'value': 'system'},
       {'key': 'onboarding_version', 'value': '0'},

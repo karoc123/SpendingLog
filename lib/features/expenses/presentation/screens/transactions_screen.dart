@@ -710,7 +710,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                         borderRadius: BorderRadius.circular(12),
                         child: InputDecorator(
                           decoration: InputDecoration(
-                            labelText: 'Kategorie',
+                            labelText: l10n?.category ?? 'Category',
                             suffixIcon: const Icon(Icons.chevron_right),
                           ),
                           child: Text(

@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/default_category_seeder.dart';
 import '../../../../core/utils/icon_map.dart';
 import '../../../../core/utils/screen_help.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -40,9 +41,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-focus the amount field on launch.
+    // Auto-focus description on launch for quick typing.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _amountFocusNode.requestFocus();
+      _descriptionFocusNode.requestFocus();
     });
     _descriptionController.addListener(_onDescriptionChanged);
   }
@@ -148,7 +149,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       _notesController.clear();
       _selectedCategoryId = null;
       _selectedDate = DateTime.now();
-      _amountFocusNode.requestFocus();
+      _descriptionFocusNode.requestFocus();
       setState(() {});
       _showSnackBar(
         AppLocalizations.of(context)?.expenseSaved ?? 'Ausgabe gespeichert',
@@ -160,7 +161,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       // Invalidate chart/statistics providers
       ref.invalidate(spendingByCategoryProvider);
       ref.invalidate(spendingSummaryProvider);
+      ref.invalidate(autocompleteSuggestionsProvider);
     }
+  }
+
+  Future<void> _createDefaultCategories() async {
+    final l10n = AppLocalizations.of(context);
+    final db = ref.read(databaseProvider);
+    final localeCode = ref.read(localeSettingProvider).value ?? 'en';
+    final hasCategories = (await db.getAllCategories()).isNotEmpty;
+    if (!hasCategories) {
+      await seedDefaultCategories(db, localeCode);
+      ref.invalidate(allCategoriesProvider);
+    }
+    if (!mounted) return;
+    _showSnackBar(l10n?.importSuccess ?? 'Import successful');
   }
 
   void _showSnackBar(String message) {
@@ -273,108 +288,154 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
           const Divider(height: 1),
 
-          // Expense input form.
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Notes first.
-                TextField(
-                  controller: _notesController,
-                  decoration: InputDecoration(
-                    labelText: l10n?.notes ?? 'Notizen (optional)',
-                    isDense: true,
+          categoriesAsync.when(
+            data: (categories) {
+              if (categories.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        l10n?.selectCategory ?? 'Please select a category',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _createDefaultCategories,
+                          icon: const Icon(Icons.auto_awesome),
+                          label: Text(
+                            l10n?.addDefaultCategories ??
+                                'Create default categories',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => context.push('/settings/categories'),
+                          icon: const Icon(Icons.category),
+                          label: Text(
+                            l10n?.manageCategories ?? 'Manage categories',
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 12),
+                );
+              }
 
-                // Amount second.
-                Row(
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        controller: _amountController,
-                        focusNode: _amountFocusNode,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
+                    // Notes first.
+                    TextField(
+                      controller: _notesController,
+                      decoration: InputDecoration(
+                        labelText: l10n?.notes ?? 'Notes (optional)',
+                        isDense: true,
+                      ),
+                      maxLines: 1,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Amount second.
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: _amountController,
+                            focusNode: _amountFocusNode,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[\d,.]'),
+                              ),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: l10n?.amount ?? 'Amount',
+                              prefixText: '$currencySymbol ',
+                              isDense: true,
+                            ),
+                            onSubmitted: (_) =>
+                                _descriptionFocusNode.requestFocus(),
+                          ),
                         ),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
-                        ],
-                        decoration: InputDecoration(
-                          labelText: l10n?.amount ?? 'Betrag',
-                          prefixText: '$currencySymbol ',
-                          isDense: true,
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description third.
+                    TextField(
+                      controller: _descriptionController,
+                      focusNode: _descriptionFocusNode,
+                      decoration: InputDecoration(
+                        labelText: l10n?.description ?? 'Description',
+                        isDense: true,
+                      ),
+                      textInputAction: TextInputAction.next,
+                    ),
+
+                    if (_showSuggestions)
+                      _buildSuggestionsList(categories, currencySymbol),
+
+                    const SizedBox(height: 12),
+
+                    // Category fourth.
+                    _buildCategoryPickerField(categories),
+
+                    const SizedBox(height: 12),
+
+                    // Date picker.
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickDate,
+                            borderRadius: BorderRadius.circular(12),
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: l10n?.date ?? 'Date',
+                                isDense: true,
+                              ),
+                              child: Text(
+                                DateFormat.yMd(
+                                  Localizations.localeOf(context).toString(),
+                                ).format(_selectedDate),
+                              ),
+                            ),
+                          ),
                         ),
-                        onSubmitted: (_) =>
-                            _descriptionFocusNode.requestFocus(),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Save button (bottom).
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _saveExpense,
+                        icon: const Icon(Icons.save),
+                        label: Text(l10n?.save ?? 'Save'),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-
-                // Description third.
-                TextField(
-                  controller: _descriptionController,
-                  focusNode: _descriptionFocusNode,
-                  decoration: InputDecoration(
-                    labelText: l10n?.description ?? 'Beschreibung',
-                    isDense: true,
-                  ),
-                  textInputAction: TextInputAction.next,
-                ),
-
-                if (_showSuggestions)
-                  _buildSuggestionsList(categoriesAsync, currencySymbol),
-
-                const SizedBox(height: 12),
-
-                // Category fourth.
-                categoriesAsync.when(
-                  data: (categories) => _buildCategoryPickerField(categories),
-                  loading: () => const LinearProgressIndicator(),
-                  error: (_, _) => const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 12),
-
-                // Date picker.
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(12),
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: l10n?.date ?? 'Datum',
-                            isDense: true,
-                          ),
-                          child: Text(
-                            DateFormat.yMd(
-                              Localizations.localeOf(context).toString(),
-                            ).format(_selectedDate),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Save button (bottom).
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _saveExpense,
-                    icon: const Icon(Icons.save),
-                    label: Text(l10n?.save ?? 'Speichern'),
-                  ),
-                ),
-              ],
+              );
+            },
+            loading: () => const Padding(
+              padding: EdgeInsets.all(16),
+              child: LinearProgressIndicator(),
+            ),
+            error: (e, _) => Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Error: $e'),
             ),
           ),
         ],
@@ -383,10 +444,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildSuggestionsList(
-    AsyncValue<List<CategoryEntity>> categoriesAsync,
+    List<CategoryEntity> categories,
     String currencySymbol,
   ) {
-    final categories = categoriesAsync.value ?? [];
     final catMap = {for (final c in categories) c.id: c};
 
     return Container(
@@ -473,7 +533,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 2),
-                      Text('inkl. Betrag', style: theme.textTheme.labelSmall),
+                      Text(
+                        AppLocalizations.of(context)?.includeAmountLabel ??
+                            'incl. amount',
+                        style: theme.textTheme.labelSmall,
+                      ),
                     ],
                   ),
                 ),
@@ -509,7 +573,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
         decoration: InputDecoration(
-          labelText: 'Kategorie',
+          labelText: AppLocalizations.of(context)?.category ?? 'Category',
           isDense: true,
           suffixIcon: const Icon(Icons.chevron_right),
         ),
@@ -580,7 +644,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         Expanded(
                           child: Text(
-                            activeParent?.name ?? 'Kategorie',
+                            activeParent?.name ??
+                                (AppLocalizations.of(context)?.category ??
+                                    'Category'),
                             style: Theme.of(ctx).textTheme.titleMedium,
                           ),
                         ),
@@ -725,7 +791,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: InputDecorator(
                               decoration: InputDecoration(
-                                labelText: 'Kategorie',
+                                labelText:
+                                    AppLocalizations.of(context)?.category ??
+                                    'Category',
                                 suffixIcon: const Icon(Icons.chevron_right),
                               ),
                               child: Text(

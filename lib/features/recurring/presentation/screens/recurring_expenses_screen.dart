@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/providers/core_providers.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/default_category_seeder.dart';
 import '../../../../core/utils/screen_help.dart';
 
 import '../../../../l10n/generated/app_localizations.dart';
@@ -54,6 +55,7 @@ class _RecurringExpensesScreenState
     final categoriesAsync = ref.watch(allCategoriesProvider);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final categories = categoriesAsync.value ?? [];
+    final hasCategories = categories.isNotEmpty;
     final catMap = {for (final c in categories) c.id: c};
 
     if (!_openedPrefill &&
@@ -92,12 +94,18 @@ class _RecurringExpensesScreenState
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showRecurringExpenseForm(context, ref, categories),
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: hasCategories
+          ? FloatingActionButton(
+              onPressed: () =>
+                  _showRecurringExpenseForm(context, ref, categories),
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: recurringAsync.when(
         data: (items) {
+          if (!hasCategories) {
+            return _buildNoCategoriesActions(context, ref);
+          }
           if (items.isEmpty) {
             return Center(
               child: Text(
@@ -141,6 +149,65 @@ class _RecurringExpensesScreenState
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
+      ),
+    );
+  }
+
+  Future<void> _createDefaultCategories(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final db = ref.read(databaseProvider);
+    final localeCode = ref.read(localeSettingProvider).value ?? 'en';
+    final hasCategories = (await db.getAllCategories()).isNotEmpty;
+    if (!hasCategories) {
+      await seedDefaultCategories(db, localeCode);
+      ref.invalidate(allCategoriesProvider);
+    }
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)?.importSuccess ?? 'Import successful',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoCategoriesActions(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n?.selectCategory ?? 'Please select a category',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => _createDefaultCategories(context, ref),
+                icon: const Icon(Icons.auto_awesome),
+                label: Text(
+                  l10n?.addDefaultCategories ?? 'Create default categories',
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/settings/categories'),
+                icon: const Icon(Icons.category),
+                label: Text(l10n?.manageCategories ?? 'Manage categories'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -285,7 +352,7 @@ class _RecurringExpensesScreenState
                         borderRadius: BorderRadius.circular(12),
                         child: InputDecorator(
                           decoration: InputDecoration(
-                            labelText: 'Kategorie',
+                            labelText: l10n?.category ?? 'Category',
                             suffixIcon: const Icon(Icons.chevron_right),
                           ),
                           child: Text(
@@ -345,7 +412,8 @@ class _RecurringExpensesScreenState
                         Padding(
                           padding: const EdgeInsets.only(top: 8, bottom: 8),
                           child: Text(
-                            'Startdatum muss in Zukunft oder heute sein',
+                            l10n?.startDateValidationFuture ??
+                                'Start date must be today or in the future',
                             style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                               color: Theme.of(ctx).colorScheme.error,
                             ),
@@ -423,16 +491,19 @@ class _RecurringExpensesScreenState
                                     ref.invalidate(spendingSummaryProvider);
                                     if (ctx.mounted) {
                                       ScaffoldMessenger.of(ctx).showSnackBar(
-                                        const SnackBar(
+                                        SnackBar(
                                           content: Text(
-                                            'Ausgabe sofort erzeugt',
+                                            l10n?.expenseGeneratedNow ??
+                                                'Expense generated now',
                                           ),
                                         ),
                                       );
                                     }
                                   },
                             icon: const Icon(Icons.bolt),
-                            label: const Text('Sofort Ausgabe erzeugen'),
+                            label: Text(
+                              l10n?.generateExpenseNow ?? 'Generate now',
+                            ),
                           ),
                         ),
                       const SizedBox(height: 12),
@@ -563,7 +634,9 @@ class _RecurringExpensesScreenState
                           ),
                         Expanded(
                           child: Text(
-                            activeParent?.name ?? 'Kategorie',
+                            activeParent?.name ??
+                                (AppLocalizations.of(context)?.category ??
+                                    'Category'),
                             style: Theme.of(ctx).textTheme.titleMedium,
                           ),
                         ),

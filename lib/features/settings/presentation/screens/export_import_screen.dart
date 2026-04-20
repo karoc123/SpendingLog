@@ -142,6 +142,7 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
   }
 
   Future<void> _exportCsv() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final csv = await ref
@@ -151,42 +152,50 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
             DateTime(_csvEnd.year, _csvEnd.month, _csvEnd.day, 23, 59, 59),
           );
       await _shareText(csv, 'spending_log_export.csv');
-      _showSnackBar(
-        AppLocalizations.of(context)?.exportSuccess ?? 'Export erfolgreich',
-      );
+      if (!mounted) return;
+      _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
     } catch (e) {
-      _showSnackBar('Export fehlgeschlagen: $e');
+      if (!mounted) return;
+      _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _exportJson() async {
+    final l10n = AppLocalizations.of(context);
     setState(() => _loading = true);
     try {
       final json = await ref.read(exportJsonProvider).call();
       await _shareText(json, 'spending_log_backup.json');
-      _showSnackBar(
-        AppLocalizations.of(context)?.exportSuccess ?? 'Export erfolgreich',
-      );
+      if (!mounted) return;
+      _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
     } catch (e) {
-      _showSnackBar('Export fehlgeschlagen: $e');
+      if (!mounted) return;
+      _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _importCsv() async {
+    final l10n = AppLocalizations.of(context);
     // Show import type selector
     final importType = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Import-Routine wählen'),
-        content: const Text('Welcher CSV-Format soll importiert werden?'),
+        title: Text(l10n?.importRoutineTitle ?? 'Choose import routine'),
+        content: Text(
+          l10n?.importRoutinePrompt ?? 'Which CSV format should be imported?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Abbrechen'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'monekin'),
@@ -202,6 +211,7 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
 
     if (importType == null) return;
 
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final result = await FilePicker.pickFiles(
@@ -229,13 +239,17 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
       final count = importType == 'dkb'
           ? await ref.read(importCsvDkbProvider).call(csvContent)
           : await ref.read(importCsvMonekinProvider).call(csvContent);
+      if (!mounted) return;
       _showSnackBar(
-        '${AppLocalizations.of(context)?.importSuccess ?? 'Import erfolgreich'}: $count ${AppLocalizations.of(context)?.entries ?? 'Einträge'}',
+        '${l10n?.importSuccess ?? 'Import successful'}: $count ${l10n?.entries ?? 'entries'}',
       );
     } catch (e) {
-      _showSnackBar('Import fehlgeschlagen: $e');
+      if (!mounted) return;
+      _showSnackBar('${l10n?.importFailed ?? 'Import failed'}: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 

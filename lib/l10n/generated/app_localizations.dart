@@ -643,6 +643,66 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Keine Daten'**
   String get noChartData;
+
+  /// No description provided for @category.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorie'**
+  String get category;
+
+  /// No description provided for @includeAmountLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'inkl. Betrag'**
+  String get includeAmountLabel;
+
+  /// No description provided for @generateExpenseNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Jetzt erzeugen'**
+  String get generateExpenseNow;
+
+  /// No description provided for @expenseGeneratedNow.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausgabe sofort erzeugt'**
+  String get expenseGeneratedNow;
+
+  /// No description provided for @startDateValidationFuture.
+  ///
+  /// In de, this message translates to:
+  /// **'Startdatum muss heute oder in der Zukunft liegen'**
+  String get startDateValidationFuture;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Export fehlgeschlagen'**
+  String get exportFailed;
+
+  /// No description provided for @importFailed.
+  ///
+  /// In de, this message translates to:
+  /// **'Import fehlgeschlagen'**
+  String get importFailed;
+
+  /// No description provided for @importRoutineTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Import-Routine wählen'**
+  String get importRoutineTitle;
+
+  /// No description provided for @importRoutinePrompt.
+  ///
+  /// In de, this message translates to:
+  /// **'Welches CSV-Format soll importiert werden?'**
+  String get importRoutinePrompt;
+
+  /// No description provided for @errorCopiedClipboard.
+  ///
+  /// In de, this message translates to:
+  /// **'Fehler in Zwischenablage kopiert'**
+  String get errorCopiedClipboard;
 }
 
 class _AppLocalizationsDelegate

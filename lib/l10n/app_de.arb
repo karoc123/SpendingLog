@@ -99,5 +99,16 @@
 
   "dailyTrend": "Tagesverlauf",
   "monthlyTrend": "Monatsverlauf",
-  "noChartData": "Keine Daten"
+  "noChartData": "Keine Daten",
+
+  "category": "Kategorie",
+  "includeAmountLabel": "inkl. Betrag",
+  "generateExpenseNow": "Jetzt erzeugen",
+  "expenseGeneratedNow": "Ausgabe sofort erzeugt",
+  "startDateValidationFuture": "Startdatum muss heute oder in der Zukunft liegen",
+  "exportFailed": "Export fehlgeschlagen",
+  "importFailed": "Import fehlgeschlagen",
+  "importRoutineTitle": "Import-Routine wählen",
+  "importRoutinePrompt": "Welches CSV-Format soll importiert werden?",
+  "errorCopiedClipboard": "Fehler in Zwischenablage kopiert"
 }

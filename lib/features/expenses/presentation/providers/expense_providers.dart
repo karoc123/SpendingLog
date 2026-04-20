@@ -19,8 +19,8 @@ final currentMonthExpensesProvider = StreamProvider<List<ExpenseEntity>>((ref) {
 });
 
 /// Autocomplete suggestions for a query string.
-final autocompleteSuggestionsProvider =
-    FutureProvider.family<List<AutocompleteSuggestion>, String>((ref, query) {
+final autocompleteSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<AutocompleteSuggestion>, String>((ref, query) {
       return ref.watch(getAutocompleteSuggestionsProvider).call(query);
     });
 

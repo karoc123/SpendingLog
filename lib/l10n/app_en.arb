@@ -99,5 +99,16 @@
 
   "dailyTrend": "Daily trend",
   "monthlyTrend": "Monthly trend",
-  "noChartData": "No data"
+  "noChartData": "No data",
+
+  "category": "Category",
+  "includeAmountLabel": "incl. amount",
+  "generateExpenseNow": "Generate now",
+  "expenseGeneratedNow": "Expense generated now",
+  "startDateValidationFuture": "Start date must be today or in the future",
+  "exportFailed": "Export failed",
+  "importFailed": "Import failed",
+  "importRoutineTitle": "Choose import routine",
+  "importRoutinePrompt": "Which CSV format should be imported?",
+  "errorCopiedClipboard": "Error copied to clipboard"
 }

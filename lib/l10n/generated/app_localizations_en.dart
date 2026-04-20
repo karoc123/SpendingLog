@@ -284,4 +284,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noChartData => 'No data';
+
+  @override
+  String get category => 'Category';
+
+  @override
+  String get includeAmountLabel => 'incl. amount';
+
+  @override
+  String get generateExpenseNow => 'Generate now';
+
+  @override
+  String get expenseGeneratedNow => 'Expense generated now';
+
+  @override
+  String get startDateValidationFuture =>
+      'Start date must be today or in the future';
+
+  @override
+  String get exportFailed => 'Export failed';
+
+  @override
+  String get importFailed => 'Import failed';
+
+  @override
+  String get importRoutineTitle => 'Choose import routine';
+
+  @override
+  String get importRoutinePrompt => 'Which CSV format should be imported?';
+
+  @override
+  String get errorCopiedClipboard => 'Error copied to clipboard';
 }

@@ -100,4 +100,27 @@ void main() {
     // Should show empty state or at least not crash
     expect(find.text('Netflix'), findsNothing);
   });
+
+  testWidgets(
+    'Recurring screen shows category actions when no categories exist',
+    (tester) async {
+      await tester.pumpWidget(
+        buildTestApp(
+          const RecurringExpensesScreen(),
+          overrides: [
+            recurringExpenseListProvider.overrideWith(
+              (ref) => Stream.value([]),
+            ),
+            allCategoriesProvider.overrideWith((ref) => Stream.value([])),
+            currencySymbolProvider.overrideWith((ref) => Stream.value('€')),
+          ],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Standardkategorien hinzufügen'), findsOneWidget);
+      expect(find.text('Kategorien verwalten'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
+    },
+  );
 }
