@@ -114,6 +114,7 @@ class _RecurringExpensesScreenState
             );
           }
           return ListView.builder(
+            addAutomaticKeepAlives: false,
             itemCount: items.length,
             padding: const EdgeInsets.only(bottom: 80),
             itemBuilder: (context, index) {

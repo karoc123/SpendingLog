@@ -1,6 +1,6 @@
 name: spending_log
 description: "SpendingLog – Personal expense tracker with smart autocomplete, recurring expenses, and local-only privacy."
-publish_to: 'none'
+publish_to: "none"
 version: 1.0.0+1
 
 environment:

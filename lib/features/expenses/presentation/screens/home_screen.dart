@@ -261,6 +261,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   );
                 }
                 return ListView.builder(
+                  addAutomaticKeepAlives: false,
                   itemCount: expenses.length,
                   padding: const EdgeInsets.only(bottom: 16),
                   itemBuilder: (context, index) {

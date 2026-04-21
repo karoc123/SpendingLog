@@ -241,6 +241,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                   children: [
                     Expanded(
                       child: ListView.builder(
+                        addAutomaticKeepAlives: false,
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {

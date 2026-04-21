@@ -612,12 +612,35 @@ class _SpendingBarChart extends StatelessWidget {
   List<_BarBucket> _buildBuckets(String locale) {
     final categoryMap = {for (final c in categories) c.id: c};
 
-    List<BarChartRodStackItem> buildStackItems(List<ExpenseEntity> items) {
-      final byCategory = <int, int>{};
-      for (final e in items) {
-        byCategory[e.categoryId] =
-            (byCategory[e.categoryId] ?? 0) + e.amountCents;
-      }
+    final bucketCount = viewMode == StatsViewMode.yearly
+        ? 12
+        : DateTime(currentDate.year, currentDate.month + 1, 0).day;
+    final bucketTotals = List<int>.filled(bucketCount, 0);
+    final bucketCategoryTotals = List.generate(
+      bucketCount,
+      (_) => <int, int>{},
+    );
+
+    for (final expense in expenses) {
+      final bucketIndex = switch (viewMode) {
+        StatsViewMode.yearly =>
+          expense.date.year == currentDate.year ? expense.date.month - 1 : -1,
+        StatsViewMode.monthly =>
+          expense.date.year == currentDate.year &&
+                  expense.date.month == currentDate.month
+              ? expense.date.day - 1
+              : -1,
+      };
+
+      if (bucketIndex < 0 || bucketIndex >= bucketCount) continue;
+
+      bucketTotals[bucketIndex] += expense.amountCents;
+      final byCategory = bucketCategoryTotals[bucketIndex];
+      byCategory[expense.categoryId] =
+          (byCategory[expense.categoryId] ?? 0) + expense.amountCents;
+    }
+
+    List<BarChartRodStackItem> buildStackItems(Map<int, int> byCategory) {
       final sorted = byCategory.entries.toList()
         ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
 
@@ -637,33 +660,24 @@ class _SpendingBarChart extends StatelessWidget {
       return [
         for (var month = 1; month <= 12; month++)
           (() {
+            final index = month - 1;
             final start = DateTime(currentDate.year, month, 1);
             final end = DateTime(currentDate.year, month + 1, 0, 23, 59, 59);
-            final bucketExpenses = expenses
-                .where(
-                  (e) =>
-                      e.date.year == currentDate.year && e.date.month == month,
-                )
-                .toList();
-            final total = bucketExpenses.fold<int>(
-              0,
-              (sum, e) => sum + e.amountCents,
-            );
             return _BarBucket(
               start: start,
               end: end,
-              totalCents: total,
+              totalCents: bucketTotals[index],
               label: DateFormat.MMM(locale).format(start),
-              stackItems: buildStackItems(bucketExpenses),
+              stackItems: buildStackItems(bucketCategoryTotals[index]),
             );
           })(),
       ];
     }
 
-    final days = DateTime(currentDate.year, currentDate.month + 1, 0).day;
     return [
-      for (var day = 1; day <= days; day++)
+      for (var day = 1; day <= bucketCount; day++)
         (() {
+          final index = day - 1;
           final start = DateTime(currentDate.year, currentDate.month, day);
           final end = DateTime(
             currentDate.year,
@@ -673,24 +687,12 @@ class _SpendingBarChart extends StatelessWidget {
             59,
             59,
           );
-          final bucketExpenses = expenses
-              .where(
-                (e) =>
-                    e.date.year == currentDate.year &&
-                    e.date.month == currentDate.month &&
-                    e.date.day == day,
-              )
-              .toList();
-          final total = bucketExpenses.fold<int>(
-            0,
-            (sum, e) => sum + e.amountCents,
-          );
           return _BarBucket(
             start: start,
             end: end,
-            totalCents: total,
+            totalCents: bucketTotals[index],
             label: '$day',
-            stackItems: buildStackItems(bucketExpenses),
+            stackItems: buildStackItems(bucketCategoryTotals[index]),
           );
         })(),
     ];

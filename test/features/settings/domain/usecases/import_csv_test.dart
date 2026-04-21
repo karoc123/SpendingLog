@@ -4,14 +4,14 @@ import 'package:mocktail/mocktail.dart';
 import 'package:spending_log/core/utils/icon_map.dart';
 import 'package:spending_log/features/expenses/domain/entities/expense_entity.dart';
 import 'package:spending_log/features/categories/domain/entities/category_entity.dart';
-import 'package:spending_log/features/settings/domain/usecases/import_csv.dart';
+import 'package:spending_log/features/settings/domain/usecases/import_csv_monekin.dart';
 
 import '../../../../helpers/test_helpers.dart';
 
 void main() {
   late MockExpenseRepository mockExpenseRepository;
   late MockCategoryRepository mockCategoryRepository;
-  late ImportCsv useCase;
+  late ImportCsvMonekin useCase;
 
   setUpAll(() {
     registerFallbackValue(makeExpense());
@@ -21,7 +21,7 @@ void main() {
   setUp(() {
     mockExpenseRepository = MockExpenseRepository();
     mockCategoryRepository = MockCategoryRepository();
-    useCase = ImportCsv(mockExpenseRepository, mockCategoryRepository);
+    useCase = ImportCsvMonekin(mockExpenseRepository, mockCategoryRepository);
     when(
       () => mockExpenseRepository.getAllExpenses(),
     ).thenAnswer((_) async => []);
