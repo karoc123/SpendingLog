@@ -69,6 +69,7 @@ RecurringExpenseEntity makeRecurring({
   int categoryId = 1,
   RecurringInterval interval = RecurringInterval.monthly,
   DateTime? startDate,
+  DateTime? endDate,
   DateTime? lastGeneratedDate,
   bool isActive = true,
 }) => RecurringExpenseEntity(
@@ -78,6 +79,7 @@ RecurringExpenseEntity makeRecurring({
   categoryId: categoryId,
   interval: interval,
   startDate: startDate ?? DateTime(2026, 1, 1),
+  endDate: endDate,
   lastGeneratedDate: lastGeneratedDate,
   isActive: isActive,
   createdAt: DateTime(2026, 1, 1),

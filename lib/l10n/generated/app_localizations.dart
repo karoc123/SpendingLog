@@ -278,11 +278,53 @@ abstract class AppLocalizations {
   /// **'Wiederkehrende Ausgabe wirklich löschen?'**
   String get deleteRecurringConfirm;
 
+  /// No description provided for @rhythm.
+  ///
+  /// In de, this message translates to:
+  /// **'Rhythmus'**
+  String get rhythm;
+
+  /// No description provided for @daily.
+  ///
+  /// In de, this message translates to:
+  /// **'Täglich'**
+  String get daily;
+
+  /// No description provided for @weekly.
+  ///
+  /// In de, this message translates to:
+  /// **'Wöchentlich'**
+  String get weekly;
+
+  /// No description provided for @quarterly.
+  ///
+  /// In de, this message translates to:
+  /// **'Quartalsweise'**
+  String get quarterly;
+
   /// No description provided for @startDate.
   ///
   /// In de, this message translates to:
   /// **'Startdatum'**
   String get startDate;
+
+  /// No description provided for @endDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Enddatum'**
+  String get endDate;
+
+  /// No description provided for @endDateOptional.
+  ///
+  /// In de, this message translates to:
+  /// **'Enddatum (optional)'**
+  String get endDateOptional;
+
+  /// No description provided for @noEndDate.
+  ///
+  /// In de, this message translates to:
+  /// **'Kein Enddatum'**
+  String get noEndDate;
 
   /// No description provided for @nextTransaction.
   ///
@@ -673,6 +715,12 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Startdatum muss heute oder in der Zukunft liegen'**
   String get startDateValidationFuture;
+
+  /// No description provided for @endDateValidationFuture.
+  ///
+  /// In de, this message translates to:
+  /// **'Enddatum muss heute oder in der Zukunft liegen'**
+  String get endDateValidationFuture;
 
   /// No description provided for @exportFailed.
   ///

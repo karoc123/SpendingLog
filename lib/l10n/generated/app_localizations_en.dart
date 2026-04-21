@@ -99,7 +99,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteRecurringConfirm => 'Really delete this recurring expense?';
 
   @override
+  String get rhythm => 'Rhythm';
+
+  @override
+  String get daily => 'Daily';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get quarterly => 'Quarterly';
+
+  @override
   String get startDate => 'Start date';
+
+  @override
+  String get endDate => 'End date';
+
+  @override
+  String get endDateOptional => 'End date (optional)';
+
+  @override
+  String get noEndDate => 'No end date';
 
   @override
   String get nextTransaction => 'Next transaction';
@@ -300,6 +321,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get startDateValidationFuture =>
       'Start date must be today or in the future';
+
+  @override
+  String get endDateValidationFuture =>
+      'End date must be today or in the future';
 
   @override
   String get exportFailed => 'Export failed';

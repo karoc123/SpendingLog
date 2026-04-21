@@ -118,4 +118,48 @@ void main() {
     expect(find.textContaining('75'), findsWidgets);
     expect(find.text('2'), findsWidgets);
   });
+
+  testWidgets('Statistics back first undoes sub drill, then parent drill', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const StatisticsScreen(),
+        overrides: [
+          spendingByCategoryProvider.overrideWith((ref) async => const []),
+          subcategorySpendingProvider.overrideWith(
+            (ref, parentId) async => const [],
+          ),
+          spendingSummaryProvider.overrideWith((ref) async => testSummary),
+          filteredStatsExpensesProvider.overrideWith((ref, filter) async {
+            return [];
+          }),
+          currencySymbolProvider.overrideWith((ref) => Stream.value('€')),
+          currentMonthExpensesProvider.overrideWith((ref) => Stream.value([])),
+          allCategoriesProvider.overrideWith(
+            (ref) => Stream.value([
+              makeCategory(id: 1, name: 'Parent Active'),
+              makeCategory(id: 2, name: 'Child Active', parentId: 1),
+            ]),
+          ),
+          selectedParentChartCategoryProvider.overrideWith((ref) => 1),
+          selectedSubChartCategoryProvider.overrideWith((ref) => 2),
+        ],
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Child Active'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Child Active'), findsNothing);
+    expect(find.text('Parent Active'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Parent Active'), findsNothing);
+  });
 }

@@ -1110,6 +1110,17 @@ class $RecurringExpensesTable extends RecurringExpenses
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _endDateMeta = const VerificationMeta(
+    'endDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endDate = GeneratedColumn<DateTime>(
+    'end_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _lastGeneratedDateMeta = const VerificationMeta(
     'lastGeneratedDate',
   );
@@ -1169,6 +1180,7 @@ class $RecurringExpensesTable extends RecurringExpenses
     categoryId,
     interval,
     startDate,
+    endDate,
     lastGeneratedDate,
     isActive,
     createdAt,
@@ -1232,6 +1244,12 @@ class $RecurringExpensesTable extends RecurringExpenses
     } else if (isInserting) {
       context.missing(_startDateMeta);
     }
+    if (data.containsKey('end_date')) {
+      context.handle(
+        _endDateMeta,
+        endDate.isAcceptableOrUnknown(data['end_date']!, _endDateMeta),
+      );
+    }
     if (data.containsKey('last_generated_date')) {
       context.handle(
         _lastGeneratedDateMeta,
@@ -1292,6 +1310,10 @@ class $RecurringExpensesTable extends RecurringExpenses
         DriftSqlType.dateTime,
         data['${effectivePrefix}start_date'],
       )!,
+      endDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}end_date'],
+      ),
       lastGeneratedDate: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}last_generated_date'],
@@ -1325,6 +1347,7 @@ class RecurringExpense extends DataClass
   final int categoryId;
   final String interval;
   final DateTime startDate;
+  final DateTime? endDate;
   final DateTime? lastGeneratedDate;
   final bool isActive;
   final DateTime createdAt;
@@ -1336,6 +1359,7 @@ class RecurringExpense extends DataClass
     required this.categoryId,
     required this.interval,
     required this.startDate,
+    this.endDate,
     this.lastGeneratedDate,
     required this.isActive,
     required this.createdAt,
@@ -1350,6 +1374,9 @@ class RecurringExpense extends DataClass
     map['category_id'] = Variable<int>(categoryId);
     map['interval'] = Variable<String>(interval);
     map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || endDate != null) {
+      map['end_date'] = Variable<DateTime>(endDate);
+    }
     if (!nullToAbsent || lastGeneratedDate != null) {
       map['last_generated_date'] = Variable<DateTime>(lastGeneratedDate);
     }
@@ -1367,6 +1394,9 @@ class RecurringExpense extends DataClass
       categoryId: Value(categoryId),
       interval: Value(interval),
       startDate: Value(startDate),
+      endDate: endDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endDate),
       lastGeneratedDate: lastGeneratedDate == null && nullToAbsent
           ? const Value.absent()
           : Value(lastGeneratedDate),
@@ -1388,6 +1418,7 @@ class RecurringExpense extends DataClass
       categoryId: serializer.fromJson<int>(json['categoryId']),
       interval: serializer.fromJson<String>(json['interval']),
       startDate: serializer.fromJson<DateTime>(json['startDate']),
+      endDate: serializer.fromJson<DateTime?>(json['endDate']),
       lastGeneratedDate: serializer.fromJson<DateTime?>(
         json['lastGeneratedDate'],
       ),
@@ -1406,6 +1437,7 @@ class RecurringExpense extends DataClass
       'categoryId': serializer.toJson<int>(categoryId),
       'interval': serializer.toJson<String>(interval),
       'startDate': serializer.toJson<DateTime>(startDate),
+      'endDate': serializer.toJson<DateTime?>(endDate),
       'lastGeneratedDate': serializer.toJson<DateTime?>(lastGeneratedDate),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1420,6 +1452,7 @@ class RecurringExpense extends DataClass
     int? categoryId,
     String? interval,
     DateTime? startDate,
+    Value<DateTime?> endDate = const Value.absent(),
     Value<DateTime?> lastGeneratedDate = const Value.absent(),
     bool? isActive,
     DateTime? createdAt,
@@ -1431,6 +1464,7 @@ class RecurringExpense extends DataClass
     categoryId: categoryId ?? this.categoryId,
     interval: interval ?? this.interval,
     startDate: startDate ?? this.startDate,
+    endDate: endDate.present ? endDate.value : this.endDate,
     lastGeneratedDate: lastGeneratedDate.present
         ? lastGeneratedDate.value
         : this.lastGeneratedDate,
@@ -1450,6 +1484,7 @@ class RecurringExpense extends DataClass
           : this.categoryId,
       interval: data.interval.present ? data.interval.value : this.interval,
       startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      endDate: data.endDate.present ? data.endDate.value : this.endDate,
       lastGeneratedDate: data.lastGeneratedDate.present
           ? data.lastGeneratedDate.value
           : this.lastGeneratedDate,
@@ -1468,6 +1503,7 @@ class RecurringExpense extends DataClass
           ..write('categoryId: $categoryId, ')
           ..write('interval: $interval, ')
           ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -1484,6 +1520,7 @@ class RecurringExpense extends DataClass
     categoryId,
     interval,
     startDate,
+    endDate,
     lastGeneratedDate,
     isActive,
     createdAt,
@@ -1499,6 +1536,7 @@ class RecurringExpense extends DataClass
           other.categoryId == this.categoryId &&
           other.interval == this.interval &&
           other.startDate == this.startDate &&
+          other.endDate == this.endDate &&
           other.lastGeneratedDate == this.lastGeneratedDate &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
@@ -1512,6 +1550,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
   final Value<int> categoryId;
   final Value<String> interval;
   final Value<DateTime> startDate;
+  final Value<DateTime?> endDate;
   final Value<DateTime?> lastGeneratedDate;
   final Value<bool> isActive;
   final Value<DateTime> createdAt;
@@ -1524,6 +1563,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
     this.categoryId = const Value.absent(),
     this.interval = const Value.absent(),
     this.startDate = const Value.absent(),
+    this.endDate = const Value.absent(),
     this.lastGeneratedDate = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1537,6 +1577,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
     required int categoryId,
     required String interval,
     required DateTime startDate,
+    this.endDate = const Value.absent(),
     this.lastGeneratedDate = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -1554,6 +1595,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
     Expression<int>? categoryId,
     Expression<String>? interval,
     Expression<DateTime>? startDate,
+    Expression<DateTime>? endDate,
     Expression<DateTime>? lastGeneratedDate,
     Expression<bool>? isActive,
     Expression<DateTime>? createdAt,
@@ -1567,6 +1609,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
       if (categoryId != null) 'category_id': categoryId,
       if (interval != null) 'interval': interval,
       if (startDate != null) 'start_date': startDate,
+      if (endDate != null) 'end_date': endDate,
       if (lastGeneratedDate != null) 'last_generated_date': lastGeneratedDate,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
@@ -1582,6 +1625,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
     Value<int>? categoryId,
     Value<String>? interval,
     Value<DateTime>? startDate,
+    Value<DateTime?>? endDate,
     Value<DateTime?>? lastGeneratedDate,
     Value<bool>? isActive,
     Value<DateTime>? createdAt,
@@ -1595,6 +1639,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
       categoryId: categoryId ?? this.categoryId,
       interval: interval ?? this.interval,
       startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
       lastGeneratedDate: lastGeneratedDate ?? this.lastGeneratedDate,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
@@ -1624,6 +1669,9 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
     if (startDate.present) {
       map['start_date'] = Variable<DateTime>(startDate.value);
     }
+    if (endDate.present) {
+      map['end_date'] = Variable<DateTime>(endDate.value);
+    }
     if (lastGeneratedDate.present) {
       map['last_generated_date'] = Variable<DateTime>(lastGeneratedDate.value);
     }
@@ -1651,6 +1699,7 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
           ..write('categoryId: $categoryId, ')
           ..write('interval: $interval, ')
           ..write('startDate: $startDate, ')
+          ..write('endDate: $endDate, ')
           ..write('lastGeneratedDate: $lastGeneratedDate, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -2739,6 +2788,7 @@ typedef $$RecurringExpensesTableCreateCompanionBuilder =
       required int categoryId,
       required String interval,
       required DateTime startDate,
+      Value<DateTime?> endDate,
       Value<DateTime?> lastGeneratedDate,
       Value<bool> isActive,
       Value<DateTime> createdAt,
@@ -2753,6 +2803,7 @@ typedef $$RecurringExpensesTableUpdateCompanionBuilder =
       Value<int> categoryId,
       Value<String> interval,
       Value<DateTime> startDate,
+      Value<DateTime?> endDate,
       Value<DateTime?> lastGeneratedDate,
       Value<bool> isActive,
       Value<DateTime> createdAt,
@@ -2824,6 +2875,11 @@ class $$RecurringExpensesTableFilterComposer
 
   ColumnFilters<DateTime> get startDate => $composableBuilder(
     column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2905,6 +2961,11 @@ class $$RecurringExpensesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get endDate => $composableBuilder(
+    column: $table.endDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get lastGeneratedDate => $composableBuilder(
     column: $table.lastGeneratedDate,
     builder: (column) => ColumnOrderings(column),
@@ -2974,6 +3035,9 @@ class $$RecurringExpensesTableAnnotationComposer
 
   GeneratedColumn<DateTime> get startDate =>
       $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endDate =>
+      $composableBuilder(column: $table.endDate, builder: (column) => column);
 
   GeneratedColumn<DateTime> get lastGeneratedDate => $composableBuilder(
     column: $table.lastGeneratedDate,
@@ -3052,6 +3116,7 @@ class $$RecurringExpensesTableTableManager
                 Value<int> categoryId = const Value.absent(),
                 Value<String> interval = const Value.absent(),
                 Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime?> endDate = const Value.absent(),
                 Value<DateTime?> lastGeneratedDate = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -3064,6 +3129,7 @@ class $$RecurringExpensesTableTableManager
                 categoryId: categoryId,
                 interval: interval,
                 startDate: startDate,
+                endDate: endDate,
                 lastGeneratedDate: lastGeneratedDate,
                 isActive: isActive,
                 createdAt: createdAt,
@@ -3078,6 +3144,7 @@ class $$RecurringExpensesTableTableManager
                 required int categoryId,
                 required String interval,
                 required DateTime startDate,
+                Value<DateTime?> endDate = const Value.absent(),
                 Value<DateTime?> lastGeneratedDate = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -3090,6 +3157,7 @@ class $$RecurringExpensesTableTableManager
                 categoryId: categoryId,
                 interval: interval,
                 startDate: startDate,
+                endDate: endDate,
                 lastGeneratedDate: lastGeneratedDate,
                 isActive: isActive,
                 createdAt: createdAt,

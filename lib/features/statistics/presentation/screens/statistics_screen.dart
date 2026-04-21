@@ -32,6 +32,7 @@ class StatisticsScreen extends ConsumerWidget {
         : ref.watch(subcategorySpendingProvider(parentCategoryId));
     final categoriesAsync = ref.watch(allCategoriesProvider);
     final selectedCategoryId = subcategoryId ?? parentCategoryId;
+    final hasDrillSelection = parentCategoryId != null || subcategoryId != null;
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final (start, end) = ref.watch(statsDateRangeProvider);
 
@@ -43,112 +44,52 @@ class StatisticsScreen extends ConsumerWidget {
       )),
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n?.statistics ?? 'Statistik'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            onPressed: () => showScreenHelp(
-              context,
-              deTitle: 'Hilfe: Statistik',
-              enTitle: 'Help: Statistics',
-              deBody:
-                  'Tippe im Kreisdiagramm auf eine Kategorie oder im Balkendiagramm auf einen Zeitraum, um gefilterte Transaktionen zu öffnen.',
-              enBody:
-                  'Tap pie chart categories or bar chart periods to open filtered transactions.',
-            ),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // View mode toggle + date navigation.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () {
-                    final d = ref.read(statsDateProvider);
-                    ref
-                        .read(statsDateProvider.notifier)
-                        .state = viewMode == StatsViewMode.monthly
-                        ? DateTime(d.year, d.month - 1, 1)
-                        : DateTime(d.year - 1, d.month, 1);
-                    ref
-                            .read(selectedParentChartCategoryProvider.notifier)
-                            .state =
-                        null;
-                    ref.read(selectedSubChartCategoryProvider.notifier).state =
-                        null;
-                  },
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                Expanded(
-                  child: Center(
-                    child: Text(
-                      viewMode == StatsViewMode.monthly
-                          ? DateFormat.yMMMM(
-                              Localizations.localeOf(context).toString(),
-                            ).format(currentDate)
-                          : currentDate.year.toString(),
-                      style: theme.textTheme.titleMedium,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    final d = ref.read(statsDateProvider);
-                    ref
-                        .read(statsDateProvider.notifier)
-                        .state = viewMode == StatsViewMode.monthly
-                        ? DateTime(d.year, d.month + 1, 1)
-                        : DateTime(d.year + 1, d.month, 1);
-                    ref
-                            .read(selectedParentChartCategoryProvider.notifier)
-                            .state =
-                        null;
-                    ref.read(selectedSubChartCategoryProvider.notifier).state =
-                        null;
-                  },
-                  icon: const Icon(Icons.chevron_right),
-                ),
-                const SizedBox(width: 8),
-                SegmentedButton<StatsViewMode>(
-                  segments: [
-                    ButtonSegment(
-                      value: StatsViewMode.monthly,
-                      label: Text(l10n?.monthly ?? 'Monat'),
-                    ),
-                    ButtonSegment(
-                      value: StatsViewMode.yearly,
-                      label: Text(l10n?.yearly ?? 'Jahr'),
-                    ),
-                  ],
-                  selected: {viewMode},
-                  onSelectionChanged: (selection) {
-                    ref.read(statsViewModeProvider.notifier).state =
-                        selection.first;
-                    ref
-                            .read(selectedParentChartCategoryProvider.notifier)
-                            .state =
-                        null;
-                    ref.read(selectedSubChartCategoryProvider.notifier).state =
-                        null;
-                  },
-                ),
-              ],
-            ),
-          ),
+    return PopScope(
+      canPop: !hasDrillSelection,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || !hasDrillSelection) return;
 
-          if (parentCategoryId != null)
+        if (subcategoryId != null) {
+          ref.read(selectedSubChartCategoryProvider.notifier).state = null;
+          return;
+        }
+
+        ref.read(selectedParentChartCategoryProvider.notifier).state = null;
+        ref.read(selectedSubChartCategoryProvider.notifier).state = null;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n?.statistics ?? 'Statistik'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => showScreenHelp(
+                context,
+                deTitle: 'Hilfe: Statistik',
+                enTitle: 'Help: Statistics',
+                deBody:
+                    'Tippe im Kreisdiagramm auf eine Kategorie oder im Balkendiagramm auf einen Zeitraum, um gefilterte Transaktionen zu öffnen.',
+                enBody:
+                    'Tap pie chart categories or bar chart periods to open filtered transactions.',
+              ),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // View mode toggle + date navigation.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  OutlinedButton.icon(
+                  IconButton(
                     onPressed: () {
+                      final d = ref.read(statsDateProvider);
+                      ref
+                          .read(statsDateProvider.notifier)
+                          .state = viewMode == StatsViewMode.monthly
+                          ? DateTime(d.year, d.month - 1, 1)
+                          : DateTime(d.year - 1, d.month, 1);
                       ref
                               .read(
                                 selectedParentChartCategoryProvider.notifier,
@@ -160,166 +101,258 @@ class StatisticsScreen extends ConsumerWidget {
                               .state =
                           null;
                     },
-                    icon: const Icon(Icons.arrow_back),
-                    label: Text(l10n?.allCategories ?? 'Alle Kategorien'),
+                    icon: const Icon(Icons.chevron_left),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        viewMode == StatsViewMode.monthly
+                            ? DateFormat.yMMMM(
+                                Localizations.localeOf(context).toString(),
+                              ).format(currentDate)
+                            : currentDate.year.toString(),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      final d = ref.read(statsDateProvider);
+                      ref
+                          .read(statsDateProvider.notifier)
+                          .state = viewMode == StatsViewMode.monthly
+                          ? DateTime(d.year, d.month + 1, 1)
+                          : DateTime(d.year + 1, d.month, 1);
+                      ref
+                              .read(
+                                selectedParentChartCategoryProvider.notifier,
+                              )
+                              .state =
+                          null;
+                      ref
+                              .read(selectedSubChartCategoryProvider.notifier)
+                              .state =
+                          null;
+                    },
+                    icon: const Icon(Icons.chevron_right),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: categoriesAsync.when(
-                      data: (categories) {
-                        final activeLabel = _activeFilterLabel(
-                          categories,
-                          parentCategoryId: parentCategoryId,
-                          subcategoryId: subcategoryId,
-                        );
-                        if (activeLabel == null) {
-                          return const SizedBox.shrink();
-                        }
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Chip(label: Text(activeLabel)),
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, _) => const SizedBox.shrink(),
-                    ),
+                  SegmentedButton<StatsViewMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: StatsViewMode.monthly,
+                        label: Text(l10n?.monthly ?? 'Monat'),
+                      ),
+                      ButtonSegment(
+                        value: StatsViewMode.yearly,
+                        label: Text(l10n?.yearly ?? 'Jahr'),
+                      ),
+                    ],
+                    selected: {viewMode},
+                    onSelectionChanged: (selection) {
+                      ref.read(statsViewModeProvider.notifier).state =
+                          selection.first;
+                      ref
+                              .read(
+                                selectedParentChartCategoryProvider.notifier,
+                              )
+                              .state =
+                          null;
+                      ref
+                              .read(selectedSubChartCategoryProvider.notifier)
+                              .state =
+                          null;
+                    },
                   ),
                 ],
               ),
             ),
 
-          // Summary numbers.
-          filteredExpensesAsync.when(
-            data: (expenses) {
-              final totalCents = expenses.fold<int>(
-                0,
-                (sum, expense) => sum + expense.amountCents,
-              );
-              return Padding(
+            if (parentCategoryId != null)
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _StatCard(
-                      label: l10n?.totalSpent ?? 'Gesamt',
-                      value: formatAmount(
-                        totalCents.abs(),
-                        symbol: currencySymbol,
-                      ),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        ref
+                                .read(
+                                  selectedParentChartCategoryProvider.notifier,
+                                )
+                                .state =
+                            null;
+                        ref
+                                .read(selectedSubChartCategoryProvider.notifier)
+                                .state =
+                            null;
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      label: Text(l10n?.allCategories ?? 'Alle Kategorien'),
                     ),
-                    _StatCard(
-                      label: l10n?.transactions ?? 'Transaktionen',
-                      value: expenses.length.toString(),
-                    ),
-                  ],
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Pie chart + legend.
-          spendingAsync.when(
-            data: (spending) {
-              final sorted = [...spending]
-                ..sort(
-                  (a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()),
-                );
-              final visibleSpending = subcategoryId == null
-                  ? sorted
-                  : sorted.where((s) => s.categoryId == subcategoryId).toList();
-              return SizedBox(
-                height: 240,
-                child: Row(
-                  children: [
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: SpendingChart(
-                        spending: visibleSpending,
-                        selectedCategoryId: selectedCategoryId,
-                        onCategoryTap: (id) {
-                          if (parentCategoryId == null) {
-                            ref
-                                    .read(
-                                      selectedParentChartCategoryProvider
-                                          .notifier,
-                                    )
-                                    .state =
-                                id;
-                            ref
-                                    .read(
-                                      selectedSubChartCategoryProvider.notifier,
-                                    )
-                                    .state =
-                                null;
-                            return;
+                      child: categoriesAsync.when(
+                        data: (categories) {
+                          final activeLabel = _activeFilterLabel(
+                            categories,
+                            parentCategoryId: parentCategoryId,
+                            subcategoryId: subcategoryId,
+                          );
+                          if (activeLabel == null) {
+                            return const SizedBox.shrink();
                           }
-                          ref
-                              .read(selectedSubChartCategoryProvider.notifier)
-                              .state = id == subcategoryId
-                              ? null
-                              : id;
-                        },
-                      ),
-                    ),
-                    SizedBox(
-                      width: 180,
-                      child: _buildLegend(
-                        context,
-                        visibleSpending,
-                        currencySymbol,
-                        onTap: (id) {
-                          _openTransactions(
-                            context,
-                            start: start,
-                            end: end,
-                            categoryId: id,
+                          return Align(
+                            alignment: Alignment.centerLeft,
+                            child: Chip(label: Text(activeLabel)),
                           );
                         },
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, _) => const SizedBox.shrink(),
                       ),
                     ),
                   ],
                 ),
-              );
-            },
-            loading: () => const SizedBox(
-              height: 240,
-              child: Center(child: CircularProgressIndicator()),
+              ),
+
+            // Summary numbers.
+            filteredExpensesAsync.when(
+              data: (expenses) {
+                final totalCents = expenses.fold<int>(
+                  0,
+                  (sum, expense) => sum + expense.amountCents,
+                );
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _StatCard(
+                        label: l10n?.totalSpent ?? 'Gesamt',
+                        value: formatAmount(
+                          totalCents.abs(),
+                          symbol: currencySymbol,
+                        ),
+                      ),
+                      _StatCard(
+                        label: l10n?.transactions ?? 'Transaktionen',
+                        value: expenses.length.toString(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
-            error: (e, _) =>
-                SizedBox(height: 240, child: Center(child: Text('Error: $e'))),
-          ),
 
-          const Divider(height: 1),
+            const SizedBox(height: 8),
 
-          // Period bar chart (clickable drilldown).
-          Expanded(
-            child: filteredExpensesAsync.when(
-              data: (expenses) => categoriesAsync.when(
-                data: (categories) => _SpendingBarChart(
-                  viewMode: viewMode,
-                  currentDate: currentDate,
-                  expenses: expenses,
-                  categories: categories,
-                  onBucketTap: (bucket) {
-                    _openTransactions(
-                      context,
-                      start: bucket.start,
-                      end: bucket.end,
-                      categoryId: selectedCategoryId,
-                    );
-                  },
+            // Pie chart + legend.
+            spendingAsync.when(
+              data: (spending) {
+                final sorted = [...spending]
+                  ..sort(
+                    (a, b) => b.totalCents.abs().compareTo(a.totalCents.abs()),
+                  );
+                final visibleSpending = subcategoryId == null
+                    ? sorted
+                    : sorted
+                          .where((s) => s.categoryId == subcategoryId)
+                          .toList();
+                return SizedBox(
+                  height: 240,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SpendingChart(
+                          spending: visibleSpending,
+                          selectedCategoryId: selectedCategoryId,
+                          onCategoryTap: (id) {
+                            if (parentCategoryId == null) {
+                              ref
+                                      .read(
+                                        selectedParentChartCategoryProvider
+                                            .notifier,
+                                      )
+                                      .state =
+                                  id;
+                              ref
+                                      .read(
+                                        selectedSubChartCategoryProvider
+                                            .notifier,
+                                      )
+                                      .state =
+                                  null;
+                              return;
+                            }
+                            ref
+                                .read(selectedSubChartCategoryProvider.notifier)
+                                .state = id == subcategoryId
+                                ? null
+                                : id;
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 180,
+                        child: _buildLegend(
+                          context,
+                          visibleSpending,
+                          currencySymbol,
+                          onTap: (id) {
+                            _openTransactions(
+                              context,
+                              start: start,
+                              end: end,
+                              categoryId: id,
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox(
+                height: 240,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => SizedBox(
+                height: 240,
+                child: Center(child: Text('Error: $e')),
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Period bar chart (clickable drilldown).
+            Expanded(
+              child: filteredExpensesAsync.when(
+                data: (expenses) => categoriesAsync.when(
+                  data: (categories) => _SpendingBarChart(
+                    viewMode: viewMode,
+                    currentDate: currentDate,
+                    expenses: expenses,
+                    categories: categories,
+                    onBucketTap: (bucket) {
+                      _openTransactions(
+                        context,
+                        start: bucket.start,
+                        end: bucket.end,
+                        categoryId: selectedCategoryId,
+                      );
+                    },
+                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (e, _) => Center(child: Text('$e')),
                 ),
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Center(child: Text('$e')),
               ),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('$e')),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

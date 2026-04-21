@@ -100,7 +100,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'Wiederkehrende Ausgabe wirklich löschen?';
 
   @override
+  String get rhythm => 'Rhythmus';
+
+  @override
+  String get daily => 'Täglich';
+
+  @override
+  String get weekly => 'Wöchentlich';
+
+  @override
+  String get quarterly => 'Quartalsweise';
+
+  @override
   String get startDate => 'Startdatum';
+
+  @override
+  String get endDate => 'Enddatum';
+
+  @override
+  String get endDateOptional => 'Enddatum (optional)';
+
+  @override
+  String get noEndDate => 'Kein Enddatum';
 
   @override
   String get nextTransaction => 'Nächste Transaktion';
@@ -302,6 +323,10 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get startDateValidationFuture =>
       'Startdatum muss heute oder in der Zukunft liegen';
+
+  @override
+  String get endDateValidationFuture =>
+      'Enddatum muss heute oder in der Zukunft liegen';
 
   @override
   String get exportFailed => 'Export fehlgeschlagen';

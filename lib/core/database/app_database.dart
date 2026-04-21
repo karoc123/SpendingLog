@@ -43,8 +43,9 @@ class RecurringExpenses extends Table {
   TextColumn get name => text().withLength(min: 1, max: 255)();
   IntColumn get amountCents => integer()();
   IntColumn get categoryId => integer().references(Categories, #id)();
-  TextColumn get interval => text()(); // 'monthly' | 'yearly'
+  TextColumn get interval => text()();
   DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime().nullable()();
   DateTimeColumn get lastGeneratedDate => dateTime().nullable()();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -77,7 +78,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => AppDatabase(connectInMemory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   // Migration strategy — seed default categories on first run.
   @override
@@ -86,8 +87,11 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
       await _seedDefaultSettings();
     },
-    // Future migration example:
-    // onUpgrade: (Migrator m, int from, int to) async { ... }
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.addColumn(recurringExpenses, recurringExpenses.endDate);
+      }
+    },
   );
 
   Future<void> _seedDefaultSettings() async {

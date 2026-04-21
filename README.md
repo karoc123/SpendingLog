@@ -8,8 +8,9 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 
 - **Fast expense entry** with recent transactions preview on top and form order: notes -> amount -> description -> category
 - **Two-step category selection** via a consistent modal picker (parent -> subcategory) across Home, Recurring, and Transactions edit flows
-- **Recurring expenses** (monthly/yearly) with live next-date preview during create/edit and a "generate now" button
-- **Interactive statistics** with pie drill-down (parent -> subcategory), clickable legend jump-to-transactions, icon badges for major slices, and stacked category-colored bars
+- **Recurring expenses** with configurable rhythm (daily/weekly/monthly/quarterly/yearly), optional end date (inactive from end date), live next-date preview, and a "generate now" button
+- **Recurring save feedback** with snackbar validation when mandatory fields are missing (e.g. no category selected)
+- **Interactive statistics** with pie drill-down (parent -> subcategory), back button drill unwind before app exit, clickable legend jump-to-transactions, icon badges for major slices, and stacked category-colored bars
 - **Transactions view** with month separators including flexible vs fixed monthly totals, transaction count, category path display, and recurring-entry badges
 - **Transactions filters** with the same modal category picker and explicit "All categories" reset option
 - **Category management** with transaction counts per category
@@ -34,9 +35,9 @@ If you find bugs, have ideas for improvements, or want to discuss design or impl
 
 SpendingLog is built around a simple, user-respecting mindset:
 
-- **No tracking** – your data stays yours  
-- **No ads** – no distractions, no dark patterns  
-- **No costs** – free to use  
+- **No tracking** – your data stays yours
+- **No ads** – no distractions, no dark patterns
+- **No costs** – free to use
 - **No cloud** – everything works fully offline and locally
 
 The goal is a fast, transparent, and trustworthy expense tracker without hidden trade‑offs.
@@ -49,14 +50,14 @@ Thanks to the Monekin project and its contributors!
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Flutter 3.41+ / Dart 3.11+ |
-| Database | Drift (SQLite) with code generation |
-| State Management | Riverpod (non-codegen) |
-| Navigation | go_router with StatefulShellRoute |
-| Charts | fl_chart |
-| Architecture | Clean Architecture, feature-based folders |
+| Layer            | Technology                                |
+| ---------------- | ----------------------------------------- |
+| Framework        | Flutter 3.41+ / Dart 3.11+                |
+| Database         | Drift (SQLite) with code generation       |
+| State Management | Riverpod (non-codegen)                    |
+| Navigation       | go_router with StatefulShellRoute         |
+| Charts           | fl_chart                                  |
+| Architecture     | Clean Architecture, feature-based folders |
 
 ## Project Structure
 
@@ -77,6 +78,7 @@ lib/
 ```
 
 Each feature follows:
+
 ```
 feature/
 ├── data/repositories/    # Repository implementations
@@ -145,6 +147,7 @@ flutter test integration_test/app_test.dart
 ```
 
 **Test structure:**
+
 - `test/features/*/domain/usecases/` — Unit tests for all 20 use cases
 - `test/features/*/presentation/screens/` — Widget tests for screens
 - `test/core/utils/` — Utility tests
@@ -163,6 +166,7 @@ For the longer-term scaling plan around translations, placeholders, review flow,
 ## CI
 
 GitHub Actions workflows in `.github/workflows/`:
+
 - **build-web.yml** — `flutter analyze`, `flutter test`, `flutter build web --release`
 - **build-apk.yml** — Android APK build
 - **release.yml** — Manual release build (APK + AAB) and GitHub Release upload

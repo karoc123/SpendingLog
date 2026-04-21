@@ -87,9 +87,9 @@ class _RecurringExpensesScreenState
               deTitle: 'Hilfe: Wiederkehrende Ausgaben',
               enTitle: 'Help: Recurring Expenses',
               deBody:
-                  'Hier legst du monatliche oder jährliche Regeln an. Du kannst Regeln bearbeiten, deaktivieren oder sofort eine Ausgabe erzeugen.',
+                  'Hier legst du Regeln mit taeglichem, woechentlichem, monatlichem, quartalsweisem oder jaehrlichem Rhythmus an. Optional kannst du ein Enddatum setzen, ab dem die Regel inaktiv wird.',
               enBody:
-                  'Manage monthly or yearly recurring rules. You can edit rules, deactivate them, or generate an expense immediately.',
+                  'Create rules with daily, weekly, monthly, quarterly, or yearly rhythm. Optionally set an end date, after which the rule becomes inactive.',
             ),
           ),
         ],
@@ -128,7 +128,7 @@ class _RecurringExpensesScreenState
                 ),
                 title: Text(item.name),
                 subtitle: Text(
-                  '${_categoryPath(catMap, item.categoryId)} · ${item.interval == RecurringInterval.monthly ? (l10n?.monthly ?? 'Monatlich') : (l10n?.yearly ?? 'Jährlich')} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}',
+                  '${_categoryPath(catMap, item.categoryId)} · ${_intervalLabel(item.interval, l10n)} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}${item.endDate != null ? ' · ${(l10n?.endDate ?? 'Enddatum')}: ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.endDate!)}' : ''}',
                 ),
                 trailing: Text(
                   formatAmount(item.amountCents, symbol: currencySymbol),
@@ -270,6 +270,7 @@ class _RecurringExpensesScreenState
         existing?.interval ?? RecurringInterval.monthly;
     DateTime selectedStartDate =
         existing?.startDate ?? prefillStartDate ?? DateTime.now();
+    DateTime? selectedEndDate = existing?.endDate;
     bool isActive = existing?.isActive ?? true;
     final l10n = AppLocalizations.of(context);
 
@@ -367,20 +368,23 @@ class _RecurringExpensesScreenState
                         ),
                       ),
                       const SizedBox(height: 12),
-                      SegmentedButton<RecurringInterval>(
-                        segments: [
-                          ButtonSegment(
-                            value: RecurringInterval.monthly,
-                            label: Text(l10n?.monthly ?? 'Monatlich'),
-                          ),
-                          ButtonSegment(
-                            value: RecurringInterval.yearly,
-                            label: Text(l10n?.yearly ?? 'Jährlich'),
-                          ),
-                        ],
-                        selected: {selectedInterval},
-                        onSelectionChanged: (s) =>
-                            setSheetState(() => selectedInterval = s.first),
+                      DropdownButtonFormField<RecurringInterval>(
+                        value: selectedInterval,
+                        decoration: InputDecoration(
+                          labelText: l10n?.rhythm ?? 'Rhythm',
+                        ),
+                        items: RecurringInterval.values
+                            .map(
+                              (interval) => DropdownMenuItem(
+                                value: interval,
+                                child: Text(_intervalLabel(interval, l10n)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setSheetState(() => selectedInterval = value);
+                        },
                       ),
                       const SizedBox(height: 12),
                       Row(
@@ -407,6 +411,67 @@ class _RecurringExpensesScreenState
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () async {
+                          final today = DateTime.now();
+                          final initial =
+                              selectedEndDate == null ||
+                                  _dayOnly(
+                                    selectedEndDate!,
+                                  ).isBefore(_dayOnly(today))
+                              ? _dayOnly(today)
+                              : selectedEndDate!;
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: initial,
+                            firstDate: DateTime(
+                              today.year,
+                              today.month,
+                              today.day,
+                            ),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setSheetState(() => selectedEndDate = picked);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText:
+                                l10n?.endDateOptional ?? 'End date (optional)',
+                            suffixIcon: selectedEndDate == null
+                                ? const Icon(Icons.event)
+                                : IconButton(
+                                    onPressed: () => setSheetState(
+                                      () => selectedEndDate = null,
+                                    ),
+                                    tooltip: l10n?.clearFilter ?? 'Clear',
+                                    icon: const Icon(Icons.clear),
+                                  ),
+                          ),
+                          child: Text(
+                            selectedEndDate == null
+                                ? (l10n?.noEndDate ?? 'No end date')
+                                : DateFormat.yMd(
+                                    Localizations.localeOf(ctx).toString(),
+                                  ).format(selectedEndDate!),
+                          ),
+                        ),
+                      ),
+                      if (selectedEndDate != null &&
+                          _isEndDateInPast(selectedEndDate!))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          child: Text(
+                            l10n?.endDateValidationFuture ??
+                                'End date must be today or in the future',
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(ctx).colorScheme.error,
+                            ),
+                          ),
+                        ),
                       // Always show next transaction date (at both CREATE and EDIT)
                       if (!_isValidForNextDate(selectedStartDate))
                         Padding(
@@ -513,11 +578,23 @@ class _RecurringExpensesScreenState
                           onPressed: () async {
                             final name = nameCtrl.text.trim();
                             final cents = parseAmountToCents(amountCtrl.text);
-                            if (name.isEmpty ||
-                                cents == null ||
-                                selectedCategoryId == null) {
+                            final validationMessage = _validateRecurringForm(
+                              name: name,
+                              amountCents: cents,
+                              categoryId: selectedCategoryId,
+                              startDate: selectedStartDate,
+                              endDate: selectedEndDate,
+                              l10n: l10n,
+                            );
+                            if (validationMessage != null) {
+                              ScaffoldMessenger.of(ctx)
+                                ..hideCurrentSnackBar()
+                                ..showSnackBar(
+                                  SnackBar(content: Text(validationMessage)),
+                                );
                               return;
                             }
+                            final validatedCents = cents!;
                             final now = DateTime.now();
                             if (existing != null) {
                               await ref
@@ -525,10 +602,11 @@ class _RecurringExpensesScreenState
                                   .call(
                                     existing.copyWith(
                                       name: name,
-                                      amountCents: cents,
+                                      amountCents: validatedCents,
                                       categoryId: selectedCategoryId,
                                       interval: selectedInterval,
                                       startDate: selectedStartDate,
+                                      endDate: () => selectedEndDate,
                                       isActive: isActive,
                                       updatedAt: now,
                                     ),
@@ -540,10 +618,11 @@ class _RecurringExpensesScreenState
                                     RecurringExpenseEntity(
                                       id: _uuid.v4(),
                                       name: name,
-                                      amountCents: cents,
+                                      amountCents: validatedCents,
                                       categoryId: selectedCategoryId!,
                                       interval: selectedInterval,
                                       startDate: selectedStartDate,
+                                      endDate: selectedEndDate,
                                       createdAt: now,
                                       updatedAt: now,
                                     ),
@@ -705,15 +784,72 @@ class _RecurringExpensesScreenState
     return '${parent.name} -> ${cat.name}';
   }
 
+  String _intervalLabel(RecurringInterval interval, AppLocalizations? l10n) {
+    switch (interval) {
+      case RecurringInterval.daily:
+        return l10n?.daily ?? 'Täglich';
+      case RecurringInterval.weekly:
+        return l10n?.weekly ?? 'Wöchentlich';
+      case RecurringInterval.monthly:
+        return l10n?.monthly ?? 'Monatlich';
+      case RecurringInterval.quarterly:
+        return l10n?.quarterly ?? 'Quartalsweise';
+      case RecurringInterval.yearly:
+        return l10n?.yearly ?? 'Jährlich';
+    }
+  }
+
+  DateTime _dayOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
+  bool _isEndDateInPast(DateTime endDate) {
+    final today = _dayOnly(DateTime.now());
+    return _dayOnly(endDate).isBefore(today);
+  }
+
+  String? _validateRecurringForm({
+    required String name,
+    required int? amountCents,
+    required int? categoryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+    required AppLocalizations? l10n,
+  }) {
+    if (name.isEmpty) {
+      return l10n?.enterDescription ?? 'Bitte Beschreibung eingeben';
+    }
+    if (amountCents == null || amountCents == 0) {
+      return l10n?.enterValidAmount ?? 'Bitte gültigen Betrag eingeben';
+    }
+    if (categoryId == null) {
+      return l10n?.selectCategory ?? 'Bitte Kategorie wählen';
+    }
+    if (!_isValidForNextDate(startDate)) {
+      return l10n?.startDateValidationFuture ??
+          'Start date must be today or in the future';
+    }
+    if (endDate != null && _isEndDateInPast(endDate)) {
+      return l10n?.endDateValidationFuture ??
+          'End date must be today or in the future';
+    }
+    return null;
+  }
+
   /// Calculate the next transaction date based on start date and interval.
   DateTime _calculateNextTransactionDate(
     DateTime startDate,
     RecurringInterval interval,
   ) {
-    if (interval == RecurringInterval.monthly) {
-      return DateTime(startDate.year, startDate.month + 1, startDate.day);
-    } else {
-      return DateTime(startDate.year + 1, startDate.month, startDate.day);
+    switch (interval) {
+      case RecurringInterval.daily:
+        return startDate.add(const Duration(days: 1));
+      case RecurringInterval.weekly:
+        return startDate.add(const Duration(days: 7));
+      case RecurringInterval.monthly:
+        return DateTime(startDate.year, startDate.month + 1, startDate.day);
+      case RecurringInterval.quarterly:
+        return DateTime(startDate.year, startDate.month + 3, startDate.day);
+      case RecurringInterval.yearly:
+        return DateTime(startDate.year + 1, startDate.month, startDate.day);
     }
   }
 

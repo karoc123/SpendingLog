@@ -87,6 +87,73 @@ void main() {
     expect(result, 1);
   });
 
+  test('should generate daily entries', () async {
+    final rule = makeRecurring(
+      id: 'r-daily',
+      interval: RecurringInterval.daily,
+      startDate: DateTime(2026, 4, 10),
+      lastGeneratedDate: null,
+    );
+    when(
+      () => mockRecurringRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => [rule]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockRecurringRepository.updateRecurringExpense(any()),
+    ).thenAnswer((_) async {});
+
+    final result = await useCase(now: DateTime(2026, 4, 12));
+
+    expect(result, 3); // 10th, 11th, 12th
+    verify(() => mockExpenseRepository.addExpense(any())).called(3);
+  });
+
+  test('should generate weekly entries', () async {
+    final rule = makeRecurring(
+      id: 'r-weekly',
+      interval: RecurringInterval.weekly,
+      startDate: DateTime(2026, 4, 1),
+      lastGeneratedDate: null,
+    );
+    when(
+      () => mockRecurringRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => [rule]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockRecurringRepository.updateRecurringExpense(any()),
+    ).thenAnswer((_) async {});
+
+    final result = await useCase(now: DateTime(2026, 4, 20));
+
+    expect(result, 3); // 1st, 8th, 15th
+  });
+
+  test('should generate quarterly entries', () async {
+    final rule = makeRecurring(
+      id: 'r-quarterly',
+      interval: RecurringInterval.quarterly,
+      startDate: DateTime(2025, 10, 5),
+      lastGeneratedDate: null,
+    );
+    when(
+      () => mockRecurringRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => [rule]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockRecurringRepository.updateRecurringExpense(any()),
+    ).thenAnswer((_) async {});
+
+    final result = await useCase(now: DateTime(2026, 7, 6));
+
+    expect(result, 4); // 2025-10-05, 2026-01-05, 2026-04-05, 2026-07-05
+  });
+
   test('should generate yearly entries', () async {
     final rule = makeRecurring(
       id: 'r1',
@@ -155,6 +222,77 @@ void main() {
 
     expect(captured.lastGeneratedDate, DateTime(2026, 4, 10));
   });
+
+  test('should stop generating at end date and deactivate rule', () async {
+    final rule = makeRecurring(
+      id: 'r-end',
+      interval: RecurringInterval.daily,
+      startDate: DateTime(2026, 4, 10),
+      endDate: DateTime(2026, 4, 13),
+      lastGeneratedDate: null,
+      isActive: true,
+    );
+    when(
+      () => mockRecurringRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => [rule]);
+    when(
+      () => mockExpenseRepository.addExpense(any()),
+    ).thenAnswer((_) async {});
+    when(
+      () => mockRecurringRepository.updateRecurringExpense(any()),
+    ).thenAnswer((_) async {});
+
+    final result = await useCase(now: DateTime(2026, 4, 20));
+
+    expect(
+      result,
+      3,
+    ); // 10th, 11th, 12th; 13th excluded (inactive from end date)
+    final captured =
+        verify(
+              () =>
+                  mockRecurringRepository.updateRecurringExpense(captureAny()),
+            ).captured.single
+            as RecurringExpenseEntity;
+    expect(captured.isActive, false);
+    expect(captured.lastGeneratedDate, DateTime(2026, 4, 12));
+  });
+
+  test(
+    'should deactivate when end date is reached even without new entries',
+    () async {
+      final rule = makeRecurring(
+        id: 'r-deactivate-only',
+        interval: RecurringInterval.monthly,
+        startDate: DateTime(2026, 1, 1),
+        endDate: DateTime(2026, 4, 1),
+        lastGeneratedDate: DateTime(2026, 3, 1),
+        isActive: true,
+      );
+      when(
+        () => mockRecurringRepository.getActiveRecurringExpenses(),
+      ).thenAnswer((_) async => [rule]);
+      when(
+        () => mockExpenseRepository.addExpense(any()),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRecurringRepository.updateRecurringExpense(any()),
+      ).thenAnswer((_) async {});
+
+      final result = await useCase(now: DateTime(2026, 4, 1));
+
+      expect(result, 0);
+      final captured =
+          verify(
+                () => mockRecurringRepository.updateRecurringExpense(
+                  captureAny(),
+                ),
+              ).captured.single
+              as RecurringExpenseEntity;
+      expect(captured.isActive, false);
+      expect(captured.lastGeneratedDate, DateTime(2026, 3, 1));
+    },
+  );
 
   test('should set recurringExpenseId on generated expenses', () async {
     final rule = makeRecurring(

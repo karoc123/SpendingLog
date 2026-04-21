@@ -40,12 +40,28 @@ class GenerateRecurringEntries {
         generated++;
       }
 
+      var updatedRule = rule;
+      var shouldUpdate = false;
+
       if (dates.isNotEmpty) {
-        final updated = rule.copyWith(
+        updatedRule = updatedRule.copyWith(
           lastGeneratedDate: () => dates.last,
           updatedAt: currentDate,
         );
-        await _recurringRepository.updateRecurringExpense(updated);
+        shouldUpdate = true;
+      }
+
+      if (_shouldDeactivateAtEndDate(rule, currentDate) &&
+          updatedRule.isActive) {
+        updatedRule = updatedRule.copyWith(
+          isActive: false,
+          updatedAt: currentDate,
+        );
+        shouldUpdate = true;
+      }
+
+      if (shouldUpdate) {
+        await _recurringRepository.updateRecurringExpense(updatedRule);
       }
     }
 
@@ -57,12 +73,19 @@ class GenerateRecurringEntries {
     DateTime now,
   ) {
     final dates = <DateTime>[];
+    final nowDay = _dayOnly(now);
+    final endDay = rule.endDate != null ? _dayOnly(rule.endDate!) : null;
+
     // Start from the day after the last generated date, or from the start date.
     DateTime cursor = rule.lastGeneratedDate != null
         ? _nextOccurrence(rule.lastGeneratedDate!, rule.interval)
         : rule.startDate;
 
-    while (!cursor.isAfter(now)) {
+    while (!_dayOnly(cursor).isAfter(nowDay)) {
+      // End date is an exclusive cutoff: from this day onward the rule is inactive.
+      if (endDay != null && !_dayOnly(cursor).isBefore(endDay)) {
+        break;
+      }
       dates.add(cursor);
       cursor = _nextOccurrence(cursor, rule.interval);
     }
@@ -70,20 +93,46 @@ class GenerateRecurringEntries {
     return dates;
   }
 
+  bool _shouldDeactivateAtEndDate(RecurringExpenseEntity rule, DateTime now) {
+    if (rule.endDate == null) return false;
+    return !_dayOnly(now).isBefore(_dayOnly(rule.endDate!));
+  }
+
+  DateTime _dayOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
+  DateTime _addMonthsClamped(DateTime from, int monthsToAdd) {
+    final monthIndex = from.month - 1 + monthsToAdd;
+    final targetYear = from.year + (monthIndex ~/ 12);
+    final targetMonth = (monthIndex % 12) + 1;
+    final lastDayOfTargetMonth = DateTime(targetYear, targetMonth + 1, 0).day;
+    final targetDay = from.day <= lastDayOfTargetMonth
+        ? from.day
+        : lastDayOfTargetMonth;
+
+    return DateTime(
+      targetYear,
+      targetMonth,
+      targetDay,
+      from.hour,
+      from.minute,
+      from.second,
+      from.millisecond,
+      from.microsecond,
+    );
+  }
+
   DateTime _nextOccurrence(DateTime from, RecurringInterval interval) {
     switch (interval) {
+      case RecurringInterval.daily:
+        return from.add(const Duration(days: 1));
+      case RecurringInterval.weekly:
+        return from.add(const Duration(days: 7));
       case RecurringInterval.monthly:
-        final next = DateTime(from.year, from.month + 1, from.day);
-        // Clamp to end of month if the day overflows.
-        if (next.month > from.month + 1 ||
-            (next.month == 1 &&
-                from.month == 12 &&
-                next.year > from.year + 1)) {
-          return DateTime(from.year, from.month + 2, 0);
-        }
-        return next;
+        return _addMonthsClamped(from, 1);
+      case RecurringInterval.quarterly:
+        return _addMonthsClamped(from, 3);
       case RecurringInterval.yearly:
-        return DateTime(from.year + 1, from.month, from.day);
+        return _addMonthsClamped(from, 12);
     }
   }
 }

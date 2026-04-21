@@ -96,6 +96,82 @@ void main() {
     expect(result, 6000);
   });
 
+  test('should calculate daily committed amount for current month', () async {
+    final rules = [
+      makeRecurring(
+        id: 'd1',
+        amountCents: 100,
+        interval: RecurringInterval.daily,
+        startDate: DateTime(2026, 4, 1),
+      ),
+    ];
+    when(
+      () => mockRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => rules);
+
+    final result = await useCase(now: DateTime(2026, 4, 15));
+
+    expect(result, 3000); // 30 days in April * 100
+  });
+
+  test('should calculate weekly committed amount for current month', () async {
+    final rules = [
+      makeRecurring(
+        id: 'w1',
+        amountCents: 1000,
+        interval: RecurringInterval.weekly,
+        startDate: DateTime(2026, 4, 1),
+      ),
+    ];
+    when(
+      () => mockRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => rules);
+
+    final result = await useCase(now: DateTime(2026, 4, 15));
+
+    expect(result, 5000); // 1st, 8th, 15th, 22nd, 29th
+  });
+
+  test(
+    'should include quarterly amount when quarter aligns in month',
+    () async {
+      final rules = [
+        makeRecurring(
+          id: 'q1',
+          amountCents: 9000,
+          interval: RecurringInterval.quarterly,
+          startDate: DateTime(2026, 1, 5),
+        ),
+      ];
+      when(
+        () => mockRepository.getActiveRecurringExpenses(),
+      ).thenAnswer((_) async => rules);
+
+      final result = await useCase(now: DateTime(2026, 4, 15));
+
+      expect(result, 9000); // next quarter occurrence in April
+    },
+  );
+
+  test('should exclude occurrences at or after end date', () async {
+    final rules = [
+      makeRecurring(
+        id: 'end1',
+        amountCents: 100,
+        interval: RecurringInterval.daily,
+        startDate: DateTime(2026, 4, 1),
+        endDate: DateTime(2026, 4, 11),
+      ),
+    ];
+    when(
+      () => mockRepository.getActiveRecurringExpenses(),
+    ).thenAnswer((_) async => rules);
+
+    final result = await useCase(now: DateTime(2026, 4, 15));
+
+    expect(result, 1000); // 1st..10th, end date is exclusive
+  });
+
   test('should return 0 when no active recurring expenses', () async {
     when(
       () => mockRepository.getActiveRecurringExpenses(),

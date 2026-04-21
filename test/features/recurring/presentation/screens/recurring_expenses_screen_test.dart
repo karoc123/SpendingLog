@@ -80,6 +80,30 @@ void main() {
     expect(find.text('Nächste Transaktion'), findsOneWidget);
   });
 
+  testWidgets('Recurring save shows snackbar when category is missing', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const RecurringExpensesScreen(),
+        overrides: buildOverrides(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Name'), 'Fitness');
+    await tester.enterText(find.widgetWithText(TextField, 'Betrag'), '12.00');
+
+    await tester.tap(find.text('Speichern'));
+    await tester.pump();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('Bitte Kategorie wählen'), findsWidgets);
+  });
+
   testWidgets('RecurringExpensesScreen shows empty state when no items', (
     tester,
   ) async {

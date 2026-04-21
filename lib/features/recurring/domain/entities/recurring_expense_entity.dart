@@ -6,6 +6,7 @@ class RecurringExpenseEntity {
   final int categoryId;
   final RecurringInterval interval;
   final DateTime startDate;
+  final DateTime? endDate;
   final DateTime? lastGeneratedDate;
   final bool isActive;
   final DateTime createdAt;
@@ -18,6 +19,7 @@ class RecurringExpenseEntity {
     required this.categoryId,
     required this.interval,
     required this.startDate,
+    this.endDate,
     this.lastGeneratedDate,
     this.isActive = true,
     required this.createdAt,
@@ -31,6 +33,7 @@ class RecurringExpenseEntity {
     int? categoryId,
     RecurringInterval? interval,
     DateTime? startDate,
+    DateTime? Function()? endDate,
     DateTime? Function()? lastGeneratedDate,
     bool? isActive,
     DateTime? createdAt,
@@ -43,6 +46,7 @@ class RecurringExpenseEntity {
       categoryId: categoryId ?? this.categoryId,
       interval: interval ?? this.interval,
       startDate: startDate ?? this.startDate,
+      endDate: endDate != null ? endDate() : this.endDate,
       lastGeneratedDate: lastGeneratedDate != null
           ? lastGeneratedDate()
           : this.lastGeneratedDate,
@@ -64,13 +68,22 @@ class RecurringExpenseEntity {
 }
 
 enum RecurringInterval {
+  daily,
+  weekly,
   monthly,
+  quarterly,
   yearly;
 
   static RecurringInterval fromString(String value) {
     switch (value) {
+      case 'daily':
+        return RecurringInterval.daily;
+      case 'weekly':
+        return RecurringInterval.weekly;
       case 'monthly':
         return RecurringInterval.monthly;
+      case 'quarterly':
+        return RecurringInterval.quarterly;
       case 'yearly':
         return RecurringInterval.yearly;
       default:
