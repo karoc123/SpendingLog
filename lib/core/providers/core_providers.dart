@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../database/app_database.dart';
 import '../../features/expenses/data/repositories/expense_repository_impl.dart';
@@ -34,6 +35,30 @@ import '../../features/settings/domain/usecases/import_csv_dkb.dart';
 import '../../features/settings/domain/usecases/update_setting.dart';
 
 const requiredOnboardingVersion = '1';
+const _releaseTagFromBuild = String.fromEnvironment(
+  'APP_VERSION',
+  defaultValue: '',
+);
+
+class AppVersionInfo {
+  final String releaseTag;
+  final String packageVersion;
+  final String buildNumber;
+  final String displayVersion;
+
+  const AppVersionInfo({
+    required this.releaseTag,
+    required this.packageVersion,
+    required this.buildNumber,
+    required this.displayVersion,
+  });
+}
+
+String _normalizedReleaseTag(String value) {
+  final trimmed = value.trim();
+  if (trimmed.isEmpty) return 'v0.0.0';
+  return trimmed.startsWith('v') ? trimmed : 'v$trimmed';
+}
 
 // ---------------------------------------------------------------------------
 // Database
@@ -203,9 +228,23 @@ final importCsvDkbProvider = Provider<ImportCsvDkb>((ref) {
   );
 });
 
-// Legacy alias for backward compatibility
-final importCsvProvider = Provider<ImportCsvMonekin>((ref) {
-  return ref.watch(importCsvMonekinProvider);
+final appVersionInfoProvider = FutureProvider<AppVersionInfo>((ref) async {
+  final packageInfo = await PackageInfo.fromPlatform();
+  final packageVersion = packageInfo.version.trim();
+  final buildNumber = packageInfo.buildNumber.trim();
+  final releaseTag = _normalizedReleaseTag(
+    _releaseTagFromBuild.isNotEmpty ? _releaseTagFromBuild : packageVersion,
+  );
+  final displayVersion = buildNumber.isEmpty
+      ? releaseTag
+      : '$releaseTag+$buildNumber';
+
+  return AppVersionInfo(
+    releaseTag: releaseTag,
+    packageVersion: packageVersion,
+    buildNumber: buildNumber,
+    displayVersion: displayVersion,
+  );
 });
 
 // ---------------------------------------------------------------------------

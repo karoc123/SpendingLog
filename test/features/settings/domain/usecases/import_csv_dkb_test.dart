@@ -24,6 +24,9 @@ void main() {
     when(
       () => mockExpenseRepository.addExpense(any()),
     ).thenAnswer((_) async {});
+    when(
+      () => mockExpenseRepository.findLatestExpenseByDescription(any()),
+    ).thenAnswer((_) async => null);
   });
 
   test(
@@ -32,9 +35,6 @@ void main() {
       when(
         () => mockCategoryRepository.getAllCategories(),
       ).thenAnswer((_) async => [makeCategory(id: 7, name: 'Import')]);
-      when(
-        () => mockExpenseRepository.getAllExpenses(),
-      ).thenAnswer((_) async => []);
 
       final imported = await useCase(
         _dkbCsv([
@@ -73,9 +73,6 @@ void main() {
     () async {
       when(
         () => mockCategoryRepository.getAllCategories(),
-      ).thenAnswer((_) async => []);
-      when(
-        () => mockExpenseRepository.getAllExpenses(),
       ).thenAnswer((_) async => []);
       when(
         () => mockCategoryRepository.addCategory(any()),

@@ -170,6 +170,19 @@ class AppDatabase extends _$AppDatabase {
             ..orderBy([(e) => OrderingTerm.desc(e.date)]))
           .get();
 
+  Future<Expense?> getLatestExpenseByDescription(String description) {
+    final normalized = description.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return Future.value(null);
+    }
+
+    return (select(expenses)
+          ..where((e) => e.description.lower().equals(normalized))
+          ..orderBy([(e) => OrderingTerm.desc(e.date)])
+          ..limit(1))
+        .getSingleOrNull();
+  }
+
   Future<int> insertExpense(ExpensesCompanion entry) =>
       into(expenses).insert(entry);
 

@@ -28,7 +28,7 @@ jobs:
         run: flutter test
 
       - name: Build Web
-        run: flutter build web --release
+        run: flutter build web --release --dart-define=APP_VERSION=v0.0.${{ github.run_number }}
 
       - uses: actions/upload-artifact@v7
         with:

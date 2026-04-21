@@ -20,6 +20,7 @@ class SettingsScreen extends ConsumerWidget {
     final locale = ref.watch(localeSettingProvider).value ?? 'de';
     final biometrics = ref.watch(biometricsEnabledProvider).value ?? false;
     final themeMode = ref.watch(themeModeSettingProvider).value ?? 'system';
+    final appVersionAsync = ref.watch(appVersionInfoProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -111,6 +112,15 @@ class SettingsScreen extends ConsumerWidget {
           // -- About / Credits section --
           _SectionHeader(l10n?.about ?? 'Über'),
           ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Version'),
+            subtitle: appVersionAsync.when(
+              data: (version) => Text(version.displayVersion),
+              loading: () => const Text('Loading...'),
+              error: (_, _) => const Text('Unavailable'),
+            ),
+          ),
+          ListTile(
             leading: const Icon(Icons.code),
             title: const Text('GitHub (GPL-3.0)'),
             trailing: const Icon(Icons.open_in_new),
@@ -189,28 +199,50 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
-  void _showThemePicker(BuildContext context, WidgetRef ref, String current) {
-    final l10n = AppLocalizations.of(context);
+  void _showSingleSettingPicker(
+    BuildContext context, {
+    required String title,
+    required String currentValue,
+    required List<(String, String)> options,
+    required Future<void> Function(String value) onSelect,
+  }) {
     showDialog(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: Text(l10n?.themeMode ?? 'Design'),
+        title: Text(title),
         children: [
-          for (final mode in ['system', 'light', 'dark'])
+          for (final option in options)
             ListTile(
-              title: Text(_themeModeLabel(mode, l10n)),
+              title: Text(option.$2),
               leading: Icon(
-                mode == current
+                option.$1 == currentValue
                     ? Icons.radio_button_checked
                     : Icons.radio_button_unchecked,
               ),
               onTap: () async {
-                await ref.read(updateSettingProvider).call('theme_mode', mode);
+                await onSelect(option.$1);
                 if (ctx.mounted) Navigator.pop(ctx);
               },
             ),
         ],
       ),
+    );
+  }
+
+  void _showThemePicker(BuildContext context, WidgetRef ref, String current) {
+    final l10n = AppLocalizations.of(context);
+    _showSingleSettingPicker(
+      context,
+      title: l10n?.themeMode ?? 'Design',
+      currentValue: current,
+      options: [
+        ('system', _themeModeLabel('system', l10n)),
+        ('light', _themeModeLabel('light', l10n)),
+        ('dark', _themeModeLabel('dark', l10n)),
+      ],
+      onSelect: (mode) {
+        return ref.read(updateSettingProvider).call('theme_mode', mode);
+      },
     );
   }
 
@@ -221,26 +253,14 @@ class SettingsScreen extends ConsumerWidget {
   ) {
     final l10n = AppLocalizations.of(context);
     final languages = [('de', 'Deutsch'), ('en', 'English')];
-    showDialog(
-      context: context,
-      builder: (ctx) => SimpleDialog(
-        title: Text(l10n?.language ?? 'Sprache'),
-        children: [
-          for (final lang in languages)
-            ListTile(
-              title: Text(lang.$2),
-              leading: Icon(
-                lang.$1 == current
-                    ? Icons.radio_button_checked
-                    : Icons.radio_button_unchecked,
-              ),
-              onTap: () async {
-                await ref.read(updateSettingProvider).call('locale', lang.$1);
-                if (ctx.mounted) Navigator.pop(ctx);
-              },
-            ),
-        ],
-      ),
+    _showSingleSettingPicker(
+      context,
+      title: l10n?.language ?? 'Sprache',
+      currentValue: current,
+      options: languages,
+      onSelect: (lang) {
+        return ref.read(updateSettingProvider).call('locale', lang);
+      },
     );
   }
 

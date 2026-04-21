@@ -1,11 +1,11 @@
 import 'package:csv/csv.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/utils/icon_map.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../../expenses/domain/repositories/expense_repository.dart';
 import '../../../categories/domain/entities/category_entity.dart';
 import '../../../categories/domain/repositories/category_repository.dart';
+import 'csv_import_utils.dart';
 
 const _uuid = Uuid();
 
@@ -25,66 +25,17 @@ class ImportCsvDkb {
 
   ImportCsvDkb(this._expenseRepository, this._categoryRepository);
 
-  /// Parses amount from DKB format (German decimal: 1.234,56)
-  static double? _parseAmount(String raw) {
-    var s = raw.trim();
-    if (s.isEmpty) return null;
-
-    final hasComma = s.contains(',');
-    final hasDot = s.contains('.');
-
-    if (hasComma && hasDot) {
-      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
-        // German: 1.234,56 → remove dots, comma → dot
-        s = s.replaceAll('.', '').replaceAll(',', '.');
-      } else {
-        // English: 1,234.56 → remove commas
-        s = s.replaceAll(',', '');
-      }
-    } else if (hasComma) {
-      s = s.replaceAll(',', '.');
-    }
-
-    return double.tryParse(s);
-  }
-
-  static String _normalizeName(String name) => name.trim().toLowerCase();
-
-  static int _deterministicColor(String name) {
-    var hash = 0;
-    for (final code in name.codeUnits) {
-      hash = (hash * 31 + code) & 0x7fffffff;
-    }
-    return availableCategoryColors[hash % availableCategoryColors.length];
-  }
-
   /// Find the category that was most recently used with a given recipient.
   Future<CategoryEntity?> _findCategoryByRecipient(
     String recipient,
-    List<ExpenseEntity> allExpenses,
     Map<int, CategoryEntity> categoryMap,
   ) async {
     if (recipient.trim().isEmpty) return null;
-
-    final normalizedRecipient = _normalizeName(recipient);
-
-    /// Search in all expenses (on real data, this would use database query)
-    ExpenseEntity? lastExpenseWithRecipient;
-    for (final expense in allExpenses) {
-      final desc = _normalizeName(expense.description);
-      if (desc == normalizedRecipient) {
-        if (lastExpenseWithRecipient == null ||
-            expense.date.isAfter(lastExpenseWithRecipient.date)) {
-          lastExpenseWithRecipient = expense;
-        }
-      }
-    }
-
-    if (lastExpenseWithRecipient != null) {
-      return categoryMap[lastExpenseWithRecipient.categoryId];
-    }
-
-    return null;
+    final lastExpense = await _expenseRepository.findLatestExpenseByDescription(
+      recipient,
+    );
+    if (lastExpense == null) return null;
+    return categoryMap[lastExpense.categoryId];
   }
 
   Future<int> call(String csvContent) async {
@@ -115,8 +66,8 @@ class ImportCsvDkb {
 
     // Load existing data
     final existingCategories = await _categoryRepository.getAllCategories();
-    final allExpenses = await _expenseRepository.getAllExpenses();
     final categoryMap = {for (final c in existingCategories) c.id: c};
+    final recipientCategoryCache = <String, CategoryEntity?>{};
 
     int imported = 0;
 
@@ -128,7 +79,7 @@ class ImportCsvDkb {
       if (umsatztyp != 'Ausgang') continue;
 
       // Column 8: Amount (must be negative for expenses)
-      final amount = _parseAmount(row[8].toString());
+      final amount = CsvImportUtils.parseAmount(row[8].toString());
       if (amount == null || amount >= 0) continue;
 
       // Convert to positive cents
@@ -140,11 +91,10 @@ class ImportCsvDkb {
       try {
         final parts = dateStr.split('.');
         if (parts.length == 3) {
-          date = DateTime(
-            int.parse('20${parts[2]}'),
-            int.parse(parts[1]),
-            int.parse(parts[0]),
-          );
+          final yearToken = parts[2];
+          final parsedYear = int.parse(yearToken);
+          final year = yearToken.length == 2 ? 2000 + parsedYear : parsedYear;
+          date = DateTime(year, int.parse(parts[1]), int.parse(parts[0]));
         }
       } catch (_) {}
       if (date == null) continue;
@@ -158,11 +108,14 @@ class ImportCsvDkb {
 
       // Category lookup: find by recipient from history, or create new
       int categoryId;
-      var existingCat = await _findCategoryByRecipient(
-        recipient,
-        allExpenses,
-        categoryMap,
-      );
+      final recipientKey = CsvImportUtils.normalizeName(recipient);
+      CategoryEntity? existingCat;
+      if (recipientCategoryCache.containsKey(recipientKey)) {
+        existingCat = recipientCategoryCache[recipientKey];
+      } else {
+        existingCat = await _findCategoryByRecipient(recipient, categoryMap);
+        recipientCategoryCache[recipientKey] = existingCat;
+      }
 
       if (existingCat != null) {
         categoryId = existingCat.id;
@@ -170,7 +123,7 @@ class ImportCsvDkb {
         /// No history for this recipient - use "Import" fallback category.
         CategoryEntity? importCat;
         for (final category in categoryMap.values) {
-          if (_normalizeName(category.name) == 'import' &&
+          if (CsvImportUtils.normalizeName(category.name) == 'import' &&
               category.parentId == null) {
             importCat = category;
             break;
@@ -183,7 +136,7 @@ class ImportCsvDkb {
             CategoryEntity(
               id: 0,
               name: 'Import',
-              colorValue: _deterministicColor('Import'),
+              colorValue: CsvImportUtils.deterministicColor('Import'),
               createdAt: now,
             ),
           );
@@ -191,7 +144,7 @@ class ImportCsvDkb {
           categoryMap[newCatId] = CategoryEntity(
             id: newCatId,
             name: 'Import',
-            colorValue: _deterministicColor('Import'),
+            colorValue: CsvImportUtils.deterministicColor('Import'),
             createdAt: now,
           );
         } else {
@@ -199,6 +152,7 @@ class ImportCsvDkb {
         }
       }
 
+      final now = DateTime.now();
       final expense = ExpenseEntity(
         id: _uuid.v4(),
         amountCents: amountCents,
@@ -206,8 +160,8 @@ class ImportCsvDkb {
         categoryId: categoryId,
         date: date,
         notes: purpose.isNotEmpty ? purpose : null,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       await _expenseRepository.addExpense(expense);

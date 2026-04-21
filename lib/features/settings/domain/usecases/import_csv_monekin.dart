@@ -1,23 +1,13 @@
 import 'package:csv/csv.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../../core/utils/icon_map.dart';
 import '../../../expenses/domain/entities/expense_entity.dart';
 import '../../../expenses/domain/repositories/expense_repository.dart';
 import '../../../categories/domain/entities/category_entity.dart';
 import '../../../categories/domain/repositories/category_repository.dart';
+import 'csv_import_utils.dart';
 
 const _uuid = Uuid();
-const _seedDefaultParentNames = {
-  'lebensmittel',
-  'haushalt',
-  'freizeit',
-  'essen',
-  'transport',
-  'gesundheit',
-  'arbeit',
-  'sonstiges',
-};
 
 /// Imports expenses from a Monekin CSV export.
 ///
@@ -31,48 +21,6 @@ class ImportCsvMonekin {
   final CategoryRepository _categoryRepository;
 
   ImportCsvMonekin(this._expenseRepository, this._categoryRepository);
-
-  /// Normalises an amount string that may use German number formatting
-  /// (`1.234,56`) or standard formatting (`1234.56`) into a value that
-  /// [double.tryParse] understands.
-  static double? _parseAmount(String raw) {
-    var s = raw.trim();
-    if (s.isEmpty) return null;
-
-    final hasComma = s.contains(',');
-    final hasDot = s.contains('.');
-
-    if (hasComma && hasDot) {
-      // Determine which is the decimal separator (it comes last).
-      if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
-        // German: 1.234,56 → remove dots (thousands), comma → dot.
-        s = s.replaceAll('.', '').replaceAll(',', '.');
-      } else {
-        // English: 1,234.56 → remove commas (thousands).
-        s = s.replaceAll(',', '');
-      }
-    } else if (hasComma) {
-      // Only comma → treat as decimal separator.
-      s = s.replaceAll(',', '.');
-    }
-    // Only dot or no separator → already fine for double.tryParse.
-
-    return double.tryParse(s);
-  }
-
-  static String _normalizeName(String name) => name.trim().toLowerCase();
-
-  static String _subcategoryKey(int parentId, String subcategoryName) {
-    return '$parentId::${_normalizeName(subcategoryName)}';
-  }
-
-  static int _deterministicColor(String name) {
-    var hash = 0;
-    for (final code in name.codeUnits) {
-      hash = (hash * 31 + code) & 0x7fffffff;
-    }
-    return availableCategoryColors[hash % availableCategoryColors.length];
-  }
 
   Future<int> call(String csvContent) async {
     final trimmed = csvContent.trim();
@@ -99,9 +47,10 @@ class ImportCsvMonekin {
     final subcategoriesByParentAndName = <String, CategoryEntity>{};
     for (final category in existingCategories) {
       if (category.parentId == null) {
-        categoriesByName[_normalizeName(category.name)] = category;
+        categoriesByName[CsvImportUtils.normalizeName(category.name)] =
+            category;
       } else {
-        subcategoriesByParentAndName[_subcategoryKey(
+        subcategoriesByParentAndName[CsvImportUtils.subcategoryKey(
               category.parentId!,
               category.name,
             )] =
@@ -114,7 +63,7 @@ class ImportCsvMonekin {
     for (final row in dataRows) {
       if (row.length < 8) continue;
 
-      final amount = _parseAmount(row[1].toString());
+      final amount = CsvImportUtils.parseAmount(row[1].toString());
       if (amount == null) continue;
 
       // Skip positive values (credits/refunds) - import only expenses.
@@ -137,37 +86,44 @@ class ImportCsvMonekin {
       // In CSV mapping: Category = parent category, Subcategory = category.
       int categoryId;
       if (parentCategoryName.isNotEmpty) {
-        var parentCat = categoriesByName[_normalizeName(parentCategoryName)];
+        var parentCat =
+            categoriesByName[CsvImportUtils.normalizeName(parentCategoryName)];
         if (parentCat == null) {
+          final now = DateTime.now();
+          final colorValue = CsvImportUtils.deterministicColor(
+            parentCategoryName,
+          );
           // Create new parent category.
           final newId = await _categoryRepository.addCategory(
             CategoryEntity(
               id: 0,
               name: parentCategoryName,
-              colorValue: _deterministicColor(parentCategoryName),
-              createdAt: DateTime.now(),
+              colorValue: colorValue,
+              createdAt: now,
             ),
           );
           parentCat = CategoryEntity(
             id: newId,
             name: parentCategoryName,
-            colorValue: _deterministicColor(parentCategoryName),
-            createdAt: DateTime.now(),
+            colorValue: colorValue,
+            createdAt: now,
           );
-          categoriesByName[_normalizeName(parentCategoryName)] = parentCat;
+          categoriesByName[CsvImportUtils.normalizeName(parentCategoryName)] =
+              parentCat;
         }
 
         if (categoryName.isNotEmpty) {
-          final key = _subcategoryKey(parentCat.id, categoryName);
+          final key = CsvImportUtils.subcategoryKey(parentCat.id, categoryName);
           var subCat = subcategoriesByParentAndName[key];
           if (subCat == null) {
+            final now = DateTime.now();
             final newId = await _categoryRepository.addCategory(
               CategoryEntity(
                 id: 0,
                 name: categoryName,
                 parentId: parentCat.id,
                 colorValue: parentCat.colorValue,
-                createdAt: DateTime.now(),
+                createdAt: now,
               ),
             );
             subCat = CategoryEntity(
@@ -175,7 +131,7 @@ class ImportCsvMonekin {
               name: categoryName,
               parentId: parentCat.id,
               colorValue: parentCat.colorValue,
-              createdAt: DateTime.now(),
+              createdAt: now,
             );
             subcategoriesByParentAndName[key] = subCat;
           }
@@ -185,13 +141,32 @@ class ImportCsvMonekin {
         }
       } else {
         // Default to first category (Miscellaneous-like).
-        final misc =
+        var misc =
             categoriesByName['sonstiges'] ??
             categoriesByName['miscellaneous'] ??
-            existingCategories.first;
+            (existingCategories.isEmpty ? null : existingCategories.first);
+        if (misc == null) {
+          final now = DateTime.now();
+          final newId = await _categoryRepository.addCategory(
+            CategoryEntity(
+              id: 0,
+              name: 'Import',
+              colorValue: CsvImportUtils.deterministicColor('Import'),
+              createdAt: now,
+            ),
+          );
+          misc = CategoryEntity(
+            id: newId,
+            name: 'Import',
+            colorValue: CsvImportUtils.deterministicColor('Import'),
+            createdAt: now,
+          );
+          categoriesByName[CsvImportUtils.normalizeName(misc.name)] = misc;
+        }
         categoryId = misc.id;
       }
 
+      final now = DateTime.now();
       final expense = ExpenseEntity(
         id: _uuid.v4(),
         amountCents: amountCents,
@@ -199,42 +174,19 @@ class ImportCsvMonekin {
         categoryId: categoryId,
         date: date,
         notes: note.isNotEmpty ? note : null,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       await _expenseRepository.addExpense(expense);
       imported++;
     }
 
-    await _cleanupUnusedSeedDefaults();
+    await CsvImportUtils.cleanupUnusedSeedDefaults(
+      categoryRepository: _categoryRepository,
+      expenseRepository: _expenseRepository,
+    );
 
     return imported;
-  }
-
-  Future<void> _cleanupUnusedSeedDefaults() async {
-    final allCategories = await _categoryRepository.getAllCategories();
-    final allExpenses = await _expenseRepository.getAllExpenses();
-    final usedCategoryIds = allExpenses.map((e) => e.categoryId).toSet();
-
-    final categoryById = {for (final c in allCategories) c.id: c};
-    final usedWithAncestors = <int>{...usedCategoryIds};
-    for (final id in usedCategoryIds) {
-      var current = categoryById[id];
-      while (current?.parentId != null) {
-        usedWithAncestors.add(current!.parentId!);
-        current = categoryById[current.parentId!];
-      }
-    }
-
-    for (final category in allCategories) {
-      if (category.parentId != null) continue;
-      final normalized = _normalizeName(category.name);
-      if (!_seedDefaultParentNames.contains(normalized)) continue;
-      if (usedWithAncestors.contains(category.id)) continue;
-      final hasChildren = allCategories.any((c) => c.parentId == category.id);
-      if (hasChildren) continue;
-      await _categoryRepository.deleteCategory(category.id);
-    }
   }
 }

@@ -200,6 +200,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final categoriesAsync = ref.watch(allCategoriesProvider);
+    final categoryMap = ref.watch(categoryMapProvider);
     final expensesAsync = ref.watch(currentMonthExpensesProvider);
     final committedAsync = ref.watch(committedAmountProvider);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
@@ -383,7 +384,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
 
                     if (_showSuggestions)
-                      _buildSuggestionsList(categories, currencySymbol),
+                      _buildSuggestionsList(categoryMap, currencySymbol),
 
                     const SizedBox(height: 12),
 
@@ -444,11 +445,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildSuggestionsList(
-    List<CategoryEntity> categories,
+    Map<int, CategoryEntity> categoryMap,
     String currencySymbol,
   ) {
-    final catMap = {for (final c in categories) c.id: c};
-
     return Container(
       constraints: const BoxConstraints(maxHeight: 180),
       margin: const EdgeInsets.only(top: 4),
@@ -463,7 +462,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: EdgeInsets.zero,
         itemBuilder: (context, index) {
           final suggestion = _suggestions[index];
-          final cat = catMap[suggestion.categoryId];
+          final cat = categoryMap[suggestion.categoryId];
           final theme = Theme.of(context);
           return Row(
             children: [

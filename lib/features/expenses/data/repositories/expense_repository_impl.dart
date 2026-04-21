@@ -39,6 +39,15 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       (await _db.getAllExpenses()).map(_toEntity).toList();
 
   @override
+  Future<ExpenseEntity?> findLatestExpenseByDescription(
+    String description,
+  ) async {
+    final row = await _db.getLatestExpenseByDescription(description);
+    if (row == null) return null;
+    return _toEntity(row);
+  }
+
+  @override
   Stream<List<ExpenseEntity>> watchAllExpenses() =>
       _db.watchAllExpenses().map((rows) => rows.map(_toEntity).toList());
 

@@ -29,6 +29,15 @@ final allCategoriesProvider = StreamProvider<List<CategoryEntity>>((ref) {
   return ref.watch(getCategoriesProvider).watch();
 });
 
+/// Category lookup map derived from [allCategoriesProvider].
+final categoryMapProvider = Provider<Map<int, CategoryEntity>>((ref) {
+  final categories = ref.watch(allCategoriesProvider).value;
+  if (categories == null || categories.isEmpty) {
+    return const <int, CategoryEntity>{};
+  }
+  return {for (final c in categories) c.id: c};
+});
+
 /// Committed recurring amount for this month.
 final committedAmountProvider = FutureProvider<int>((ref) {
   return ref.watch(getCommittedAmountProvider).call();

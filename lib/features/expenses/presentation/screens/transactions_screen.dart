@@ -64,6 +64,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     final l10n = AppLocalizations.of(context);
     final expensesAsync = ref.watch(expenseListProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
+    final categoryMap = ref.watch(categoryMapProvider);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final dateFormat = DateFormat.yMMMd(
       Localizations.localeOf(context).toString(),
@@ -211,9 +212,9 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
             child: expensesAsync.when(
               data: (expenses) {
                 final categories = categoriesAsync.value ?? [];
-                final categoryMap = {for (final c in categories) c.id: c};
 
                 final filtered = _applyFilters(expenses, categoryMap);
+                final monthlySummaries = _buildMonthSummaries(filtered);
                 final totalCents = filtered.fold<int>(
                   0,
                   (sum, expense) => sum + expense.amountCents,
@@ -252,10 +253,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                               previous == null ||
                               previous.date.year != expense.date.year ||
                               previous.date.month != expense.date.month;
-                          final monthSummary = _buildMonthSummary(
-                            filtered,
-                            index,
-                          );
+                          final monthSummary =
+                              monthlySummaries[(
+                                expense.date.year,
+                                expense.date.month,
+                              )] ??
+                              const _MonthSummary(flexCents: 0, fixedCents: 0);
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -316,24 +319,31 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     );
   }
 
-  _MonthSummary _buildMonthSummary(List<ExpenseEntity> expenses, int index) {
-    final expense = expenses[index];
-    var flexCents = 0;
-    var fixedCents = 0;
+  Map<(int, int), _MonthSummary> _buildMonthSummaries(
+    List<ExpenseEntity> expenses,
+  ) {
+    final summaryByMonth = <(int, int), _MonthSummary>{};
 
-    for (final entry in expenses) {
-      if (entry.date.year != expense.date.year ||
-          entry.date.month != expense.date.month) {
-        continue;
-      }
-      if (entry.isRecurring) {
-        fixedCents += entry.amountCents;
+    for (final expense in expenses) {
+      final key = (expense.date.year, expense.date.month);
+      final current =
+          summaryByMonth[key] ??
+          const _MonthSummary(flexCents: 0, fixedCents: 0);
+
+      if (expense.isRecurring) {
+        summaryByMonth[key] = _MonthSummary(
+          flexCents: current.flexCents,
+          fixedCents: current.fixedCents + expense.amountCents,
+        );
       } else {
-        flexCents += entry.amountCents;
+        summaryByMonth[key] = _MonthSummary(
+          flexCents: current.flexCents + expense.amountCents,
+          fixedCents: current.fixedCents,
+        );
       }
     }
 
-    return _MonthSummary(flexCents: flexCents, fixedCents: fixedCents);
+    return summaryByMonth;
   }
 
   String _monthHeaderLabel(

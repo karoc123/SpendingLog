@@ -3,6 +3,7 @@ import '../entities/autocomplete_suggestion.dart';
 
 abstract class ExpenseRepository {
   Future<List<ExpenseEntity>> getAllExpenses();
+  Future<ExpenseEntity?> findLatestExpenseByDescription(String description);
   Stream<List<ExpenseEntity>> watchAllExpenses();
   Future<List<ExpenseEntity>> getExpensesInRange(DateTime start, DateTime end);
   Stream<List<ExpenseEntity>> watchExpensesInRange(

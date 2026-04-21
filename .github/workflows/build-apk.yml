@@ -64,7 +64,8 @@ jobs:
             --release \
             --no-tree-shake-icons \
             --build-number ${{ github.run_number }} \
-            --build-name "1.0.${{ github.run_number }}"
+            --build-name "1.0.${{ github.run_number }}" \
+            --dart-define=APP_VERSION=v1.0.${{ github.run_number }}
 
       - uses: actions/upload-artifact@v7
         with:

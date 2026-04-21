@@ -19,9 +19,14 @@ class ExportImportScreen extends ConsumerStatefulWidget {
 }
 
 class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
-  DateTime _csvStart = DateTime(DateTime.now().year, DateTime.now().month, 1);
+  DateTime _csvStart = _initialCsvStart();
   DateTime _csvEnd = DateTime.now();
   bool _loading = false;
+
+  static DateTime _initialCsvStart() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, 1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -143,43 +148,37 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
 
   Future<void> _exportCsv() async {
     final l10n = AppLocalizations.of(context);
-    setState(() => _loading = true);
-    try {
-      final csv = await ref
-          .read(exportCsvProvider)
-          .call(
-            _csvStart,
-            DateTime(_csvEnd.year, _csvEnd.month, _csvEnd.day, 23, 59, 59),
-          );
-      await _shareText(csv, 'spending_log_export.csv');
-      if (!mounted) return;
-      _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
+    await _runWithLoading(() async {
+      try {
+        final csv = await ref
+            .read(exportCsvProvider)
+            .call(
+              _csvStart,
+              DateTime(_csvEnd.year, _csvEnd.month, _csvEnd.day, 23, 59, 59),
+            );
+        await _shareText(csv, 'spending_log_export.csv');
+        if (!mounted) return;
+        _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
+      } catch (e) {
+        if (!mounted) return;
+        _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
       }
-    }
+    });
   }
 
   Future<void> _exportJson() async {
     final l10n = AppLocalizations.of(context);
-    setState(() => _loading = true);
-    try {
-      final json = await ref.read(exportJsonProvider).call();
-      await _shareText(json, 'spending_log_backup.json');
-      if (!mounted) return;
-      _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
+    await _runWithLoading(() async {
+      try {
+        final json = await ref.read(exportJsonProvider).call();
+        await _shareText(json, 'spending_log_backup.json');
+        if (!mounted) return;
+        _showSnackBar(l10n?.exportSuccess ?? 'Export successful');
+      } catch (e) {
+        if (!mounted) return;
+        _showSnackBar('${l10n?.exportFailed ?? 'Export failed'}: $e');
       }
-    }
+    });
   }
 
   Future<void> _importCsv() async {
@@ -212,40 +211,48 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
     if (importType == null) return;
 
     if (!mounted) return;
-    setState(() => _loading = true);
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-      );
-      if (result == null || result.files.isEmpty) {
-        setState(() => _loading = false);
-        return;
-      }
-
-      String csvContent;
-      if (kIsWeb) {
-        final bytes = result.files.first.bytes;
-        if (bytes == null) {
-          setState(() => _loading = false);
+    await _runWithLoading(() async {
+      try {
+        final result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+        );
+        if (result == null || result.files.isEmpty) {
           return;
         }
-        csvContent = String.fromCharCodes(bytes);
-      } else {
-        final file = File(result.files.first.path!);
-        csvContent = await file.readAsString();
-      }
 
-      final count = importType == 'dkb'
-          ? await ref.read(importCsvDkbProvider).call(csvContent)
-          : await ref.read(importCsvMonekinProvider).call(csvContent);
-      if (!mounted) return;
-      _showSnackBar(
-        '${l10n?.importSuccess ?? 'Import successful'}: $count ${l10n?.entries ?? 'entries'}',
-      );
-    } catch (e) {
-      if (!mounted) return;
-      _showSnackBar('${l10n?.importFailed ?? 'Import failed'}: $e');
+        String csvContent;
+        if (kIsWeb) {
+          final bytes = result.files.first.bytes;
+          if (bytes == null) {
+            return;
+          }
+          csvContent = String.fromCharCodes(bytes);
+        } else {
+          final file = File(result.files.first.path!);
+          csvContent = await file.readAsString();
+        }
+
+        final count = importType == 'dkb'
+            ? await ref.read(importCsvDkbProvider).call(csvContent)
+            : await ref.read(importCsvMonekinProvider).call(csvContent);
+        if (!mounted) return;
+        _showSnackBar(
+          '${l10n?.importSuccess ?? 'Import successful'}: $count ${l10n?.entries ?? 'entries'}',
+        );
+      } catch (e) {
+        if (!mounted) return;
+        _showSnackBar('${l10n?.importFailed ?? 'Import failed'}: $e');
+      }
+    });
+  }
+
+  Future<void> _runWithLoading(Future<void> Function() operation) async {
+    if (mounted) {
+      setState(() => _loading = true);
+    }
+    try {
+      await operation();
     } finally {
       if (mounted) {
         setState(() => _loading = false);

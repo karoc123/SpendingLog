@@ -14,6 +14,14 @@ void main() {
       localeSettingProvider.overrideWith((ref) => Stream.value('de')),
       themeModeSettingProvider.overrideWith((ref) => Stream.value('system')),
       biometricsEnabledProvider.overrideWith((ref) => Stream.value(false)),
+      appVersionInfoProvider.overrideWith(
+        (ref) async => const AppVersionInfo(
+          releaseTag: 'v1.2.3',
+          packageVersion: '1.2.3',
+          buildNumber: '42',
+          displayVersion: 'v1.2.3+42',
+        ),
+      ),
     ];
   }
 

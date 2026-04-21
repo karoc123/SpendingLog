@@ -53,10 +53,10 @@ class _RecurringExpensesScreenState
     final l10n = AppLocalizations.of(context);
     final recurringAsync = ref.watch(recurringExpenseListProvider);
     final categoriesAsync = ref.watch(allCategoriesProvider);
+    final categoryMap = ref.watch(categoryMapProvider);
     final currencySymbol = ref.watch(currencySymbolProvider).value ?? '€';
     final categories = categoriesAsync.value ?? [];
     final hasCategories = categories.isNotEmpty;
-    final catMap = {for (final c in categories) c.id: c};
 
     if (!_openedPrefill &&
         categories.isNotEmpty &&
@@ -118,7 +118,7 @@ class _RecurringExpensesScreenState
             padding: const EdgeInsets.only(bottom: 80),
             itemBuilder: (context, index) {
               final item = items[index];
-              final cat = catMap[item.categoryId];
+              final cat = categoryMap[item.categoryId];
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Color(
@@ -128,7 +128,7 @@ class _RecurringExpensesScreenState
                 ),
                 title: Text(item.name),
                 subtitle: Text(
-                  '${_categoryPath(catMap, item.categoryId)} · ${_intervalLabel(item.interval, l10n)} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}${item.endDate != null ? ' · ${(l10n?.endDate ?? 'Enddatum')}: ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.endDate!)}' : ''}',
+                  '${_categoryPath(categoryMap, item.categoryId)} · ${_intervalLabel(item.interval, l10n)} · ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.startDate)}${item.endDate != null ? ' · ${(l10n?.endDate ?? 'Enddatum')}: ${DateFormat.yMd(Localizations.localeOf(context).toString()).format(item.endDate!)}' : ''}',
                 ),
                 trailing: Text(
                   formatAmount(item.amountCents, symbol: currencySymbol),
@@ -369,7 +369,7 @@ class _RecurringExpensesScreenState
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<RecurringInterval>(
-                        value: selectedInterval,
+                        initialValue: selectedInterval,
                         decoration: InputDecoration(
                           labelText: l10n?.rhythm ?? 'Rhythm',
                         ),
