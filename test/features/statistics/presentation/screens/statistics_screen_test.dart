@@ -94,6 +94,29 @@ void main() {
     expect(find.textContaining('70'), findsWidgets);
   });
 
+  testWidgets('StatisticsScreen shows expenses and savings bar legend', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const StatisticsScreen(),
+        overrides: [
+          ...buildOverrides(),
+          filteredStatsExpensesProvider.overrideWith((ref, filter) async {
+            return [
+              makeExpense(id: 'bar-1', amountCents: 3000, categoryId: 1),
+              makeExpense(id: 'bar-2', amountCents: 1500, categoryId: 2),
+            ];
+          }),
+        ],
+      ),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Sparen'), findsOneWidget);
+    expect(find.text('Ausgaben'), findsWidgets);
+  });
+
   testWidgets('StatisticsScreen shows filtered total, count and active label', (
     tester,
   ) async {

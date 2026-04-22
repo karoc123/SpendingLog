@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -98,6 +99,18 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
             onPressed: _loading ? null : _exportJson,
             icon: const Icon(Icons.backup),
             label: Text(l10n?.exportJson ?? 'JSON exportieren'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _importJson,
+            icon: const Icon(Icons.restore),
+            label: Text(l10n?.jsonImport ?? 'JSON-Backup importieren'),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            l10n?.jsonImportDescription ??
+                'Stellt alle Daten aus einer JSON-Backup-Datei wieder her. Bestehende Daten werden ersetzt.',
+            style: theme.textTheme.bodySmall,
           ),
 
           const SizedBox(height: 24),
@@ -239,6 +252,76 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
         if (!mounted) return;
         _showSnackBar(
           '${l10n?.importSuccess ?? 'Import successful'}: $count ${l10n?.entries ?? 'entries'}',
+        );
+      } catch (e) {
+        if (!mounted) return;
+        _showSnackBar('${l10n?.importFailed ?? 'Import failed'}: $e');
+      }
+    });
+  }
+
+  Future<void> _importJson() async {
+    final l10n = AppLocalizations.of(context);
+    final shouldRestore = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n?.jsonImportConfirmTitle ?? 'Backup wiederherstellen?'),
+        content: Text(
+          l10n?.jsonImportConfirmMessage ??
+              'Aktuelle Daten werden vollständig durch das ausgewählte Backup ersetzt.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n?.cancel ?? 'Abbrechen'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n?.continueLabel ?? 'Weiter'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRestore != true) {
+      return;
+    }
+
+    if (!mounted) return;
+
+    await _runWithLoading(() async {
+      try {
+        final result = await FilePicker.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['json'],
+        );
+        if (result == null || result.files.isEmpty) {
+          return;
+        }
+
+        String jsonContent;
+        if (kIsWeb) {
+          final bytes = result.files.first.bytes;
+          if (bytes == null) {
+            return;
+          }
+          jsonContent = utf8.decode(bytes);
+        } else {
+          final path = result.files.first.path;
+          if (path == null) {
+            return;
+          }
+          final file = File(path);
+          jsonContent = await file.readAsString();
+        }
+
+        final restore = await ref.read(importJsonProvider).call(jsonContent);
+        if (!mounted) return;
+        _showSnackBar(
+          '${l10n?.jsonImportResult ?? 'Restore completed'}: '
+          '${restore.categoryCount} ${l10n?.categoriesLabel ?? 'categories'}, '
+          '${restore.expenseCount} ${l10n?.expensesLabel ?? 'expenses'}, '
+          '${restore.recurringCount} ${l10n?.recurringLabel ?? 'recurring'}, '
+          '${restore.settingsCount} ${l10n?.settingsLabel ?? 'settings'}',
         );
       } catch (e) {
         if (!mounted) return;

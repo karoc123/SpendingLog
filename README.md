@@ -10,11 +10,13 @@ For the full product vision, see [docs/vision.md](docs/vision.md).
 - **Two-step category selection** via a consistent modal picker (parent -> subcategory) across Home, Recurring, and Transactions edit flows
 - **Recurring expenses** with configurable rhythm (daily/weekly/monthly/quarterly/yearly), optional end date (inactive from end date), live next-date preview, and a "generate now" button
 - **Recurring save feedback** with snackbar validation when mandatory fields are missing (e.g. no category selected)
-- **Interactive statistics** with pie drill-down (parent -> subcategory), back button drill unwind before app exit, clickable legend jump-to-transactions, icon badges for major slices, and stacked category-colored bars
+- **Interactive statistics** with pie drill-down (parent -> subcategory), back button drill unwind before app exit, clickable legend jump-to-transactions, icon badges for major slices, and a lower period bar split into **Expenses** vs **Savings** with direct segment drilldown
 - **Transactions view** with month separators including flexible vs fixed monthly totals, transaction count, category path display, and recurring-entry badges
 - **Transactions filters** with the same modal category picker and explicit "All categories" reset option
 - **Category management** with transaction counts per category
 - **CSV/JSON export & import**:
+  - **JSON full restore import**: imports a backup atomically (all-or-nothing), replacing existing data (categories, expenses, recurring expenses, settings)
+  - **Savings round-trip support**: category `is_savings` is exported/imported so savings classification is preserved
   - **Multiple import formats**: Monekin (standard) and DKB Bank (German bank CSV) with automatic category lookup by recipient and an on-demand `Import` fallback category
   - **Import safeguards**: positive values skipped, deterministic category colors, subcategory color inherits parent, unused seeded defaults cleaned up
 - **Context help button** in each main tab screen (Home, Transactions, Statistics, Recurring, Settings)

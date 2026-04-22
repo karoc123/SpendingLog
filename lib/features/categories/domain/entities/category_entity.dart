@@ -5,6 +5,7 @@ class CategoryEntity {
   final int? parentId;
   final String iconName;
   final int colorValue;
+  final bool isSavings;
   final int sortOrder;
   final DateTime createdAt;
 
@@ -14,6 +15,7 @@ class CategoryEntity {
     this.parentId,
     this.iconName = 'category',
     this.colorValue = 0xFF9E9E9E,
+    this.isSavings = false,
     this.sortOrder = 0,
     required this.createdAt,
   });
@@ -24,6 +26,7 @@ class CategoryEntity {
     int? Function()? parentId,
     String? iconName,
     int? colorValue,
+    bool? isSavings,
     int? sortOrder,
     DateTime? createdAt,
   }) {
@@ -33,6 +36,7 @@ class CategoryEntity {
       parentId: parentId != null ? parentId() : this.parentId,
       iconName: iconName ?? this.iconName,
       colorValue: colorValue ?? this.colorValue,
+      isSavings: isSavings ?? this.isSavings,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
     );

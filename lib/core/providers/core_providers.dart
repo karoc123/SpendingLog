@@ -25,13 +25,16 @@ import '../../features/recurring/domain/usecases/get_recurring_expenses.dart';
 import '../../features/recurring/domain/usecases/update_recurring_expense.dart';
 import '../../features/statistics/domain/usecases/get_spending_by_category.dart';
 import '../../features/statistics/domain/usecases/get_spending_summary.dart';
+import '../../features/settings/data/repositories/backup_restore_repository_impl.dart';
 import '../../features/settings/data/repositories/settings_repository_impl.dart';
+import '../../features/settings/domain/repositories/backup_restore_repository.dart';
 import '../../features/settings/domain/repositories/settings_repository.dart';
 import '../../features/settings/domain/usecases/export_csv.dart';
 import '../../features/settings/domain/usecases/export_json.dart';
 import '../../features/settings/domain/usecases/get_setting.dart';
 import '../../features/settings/domain/usecases/import_csv_monekin.dart';
 import '../../features/settings/domain/usecases/import_csv_dkb.dart';
+import '../../features/settings/domain/usecases/import_json.dart';
 import '../../features/settings/domain/usecases/update_setting.dart';
 
 const requiredOnboardingVersion = '1';
@@ -90,6 +93,12 @@ final recurringExpenseRepositoryProvider = Provider<RecurringExpenseRepository>(
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
   return SettingsRepositoryImpl(ref.watch(databaseProvider));
+});
+
+final backupRestoreRepositoryProvider = Provider<BackupRestoreRepository>((
+  ref,
+) {
+  return BackupRestoreRepositoryImpl(ref.watch(databaseProvider));
 });
 
 // ---------------------------------------------------------------------------
@@ -228,6 +237,10 @@ final importCsvDkbProvider = Provider<ImportCsvDkb>((ref) {
   );
 });
 
+final importJsonProvider = Provider<ImportJson>((ref) {
+  return ImportJson(ref.watch(backupRestoreRepositoryProvider));
+});
+
 final appVersionInfoProvider = FutureProvider<AppVersionInfo>((ref) async {
   final packageInfo = await PackageInfo.fromPlatform();
   final packageVersion = packageInfo.version.trim();
@@ -235,9 +248,8 @@ final appVersionInfoProvider = FutureProvider<AppVersionInfo>((ref) async {
   final releaseTag = _normalizedReleaseTag(
     _releaseTagFromBuild.isNotEmpty ? _releaseTagFromBuild : packageVersion,
   );
-  final displayVersion = buildNumber.isEmpty
-      ? releaseTag
-      : '$releaseTag+$buildNumber';
+  // Keep buildNumber available internally, but show only semantic tag in UI.
+  final displayVersion = releaseTag;
 
   return AppVersionInfo(
     releaseTag: releaseTag,

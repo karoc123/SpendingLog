@@ -30,7 +30,7 @@ This is where data turns into insights.
 
 - **Time-Based Overview:** I can toggle between a monthly and a yearly view to identify trends in my spending behavior.
 - **Visual Analysis:** A chart shows me at a glance the percentage share of my categories relative to my total spending, including icon badges for major slices.
-- **Interactive Drill-down:** Tapping a pie slice drills from parent categories into subcategories without leaving the chart; tapping a legend item opens the filtered transaction view directly. The lower bar chart uses stacked category colors per period. Pressing back first undoes the current drill level before leaving the view.
+- **Interactive Drill-down:** Tapping a pie slice drills from parent categories into subcategories without leaving the chart; tapping a legend item opens the filtered transaction view directly. The lower bar chart uses two stacked segments per period (Expenses and Savings), and tapping a segment opens the period with segment-specific filtering. Pressing back first undoes the current drill level before leaving the view.
 - **Transaction Count:** In the transactions overview, I see the number of transactions in parentheses next to the total (e.g., "Gesamt: €150.50 (5)") so I know how many expenses make up that sum.
 - **Readable History:** The transaction list shows month separators and a filtered total so month changes are visible instantly. Each transaction displays the category path (Category → Subcategory) for clarity.
 

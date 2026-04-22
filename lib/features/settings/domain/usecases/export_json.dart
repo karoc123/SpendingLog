@@ -46,6 +46,7 @@ class ExportJson {
     'parent_id': c.parentId,
     'icon_name': c.iconName,
     'color_value': c.colorValue,
+    'is_savings': c.isSavings,
     'sort_order': c.sortOrder,
     'created_at': c.createdAt.toIso8601String(),
   };
@@ -69,6 +70,7 @@ class ExportJson {
     'category_id': r.categoryId,
     'interval': r.interval.name,
     'start_date': r.startDate.toIso8601String(),
+    'end_date': r.endDate?.toIso8601String(),
     'last_generated_date': r.lastGeneratedDate?.toIso8601String(),
     'is_active': r.isActive,
     'created_at': r.createdAt.toIso8601String(),

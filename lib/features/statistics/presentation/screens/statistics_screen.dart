@@ -322,6 +322,8 @@ class StatisticsScreen extends ConsumerWidget {
                   final viewMode = ref.watch(statsViewModeProvider);
                   final currentDate = ref.watch(statsDateProvider);
                   final selectedCategoryId = subcategoryId ?? parentCategoryId;
+                  final currencySymbol =
+                      ref.watch(currencySymbolProvider).value ?? '€';
                   final categoriesAsync = ref.watch(allCategoriesProvider);
                   final (start, end) = ref.watch(statsDateRangeProvider);
                   final filteredExpensesAsync = ref.watch(
@@ -339,12 +341,16 @@ class StatisticsScreen extends ConsumerWidget {
                         currentDate: currentDate,
                         expenses: expenses,
                         categories: categories,
-                        onBucketTap: (bucket) {
+                        currencySymbol: currencySymbol,
+                        onBucketTap: (bucket, segment) {
                           _openTransactions(
                             context,
                             start: bucket.start,
                             end: bucket.end,
                             categoryId: selectedCategoryId,
+                            segment: segment == _BarSegmentType.savings
+                                ? 'savings'
+                                : 'expenses',
                           );
                         },
                       ),
@@ -386,13 +392,15 @@ class StatisticsScreen extends ConsumerWidget {
     required DateTime start,
     required DateTime end,
     int? categoryId,
+    String? segment,
   }) {
     final location = Uri(
       path: '/transactions',
       queryParameters: {
         'start': start.toIso8601String(),
         'end': end.toIso8601String(),
-        if (categoryId != null) 'categoryId': '$categoryId',
+        ...?categoryId != null ? {'categoryId': '$categoryId'} : null,
+        ...?segment != null ? {'segment': segment} : null,
       },
     ).toString();
     context.push(location);
@@ -487,31 +495,61 @@ class _StatCard extends StatelessWidget {
 class _BarBucket {
   final DateTime start;
   final DateTime end;
-  final int totalCents;
+  final int expensesCents;
+  final int savingsCents;
   final String label;
   final List<BarChartRodStackItem> stackItems;
+  final List<_BarSegmentType> segmentOrder;
+
+  int get totalCents => expensesCents + savingsCents;
+
+  _BarSegmentType? segmentForStackIndex(int index) {
+    if (segmentOrder.isEmpty) {
+      return null;
+    }
+    if (index < 0 || index >= segmentOrder.length) {
+      return segmentOrder.first;
+    }
+    return segmentOrder[index];
+  }
 
   const _BarBucket({
     required this.start,
     required this.end,
-    required this.totalCents,
+    required this.expensesCents,
+    required this.savingsCents,
     required this.label,
     required this.stackItems,
+    required this.segmentOrder,
   });
 }
 
+enum _BarSegmentType { expenses, savings }
+
+class _BucketStackData {
+  final List<BarChartRodStackItem> items;
+  final List<_BarSegmentType> segmentOrder;
+
+  const _BucketStackData({required this.items, required this.segmentOrder});
+}
+
 class _SpendingBarChart extends StatelessWidget {
+  static const _expensesColor = Color(0xFFEF5350);
+  static const _savingsColor = Color(0xFF26A69A);
+
   final StatsViewMode viewMode;
   final DateTime currentDate;
   final List<ExpenseEntity> expenses;
   final List<CategoryEntity> categories;
-  final ValueChanged<_BarBucket> onBucketTap;
+  final String currencySymbol;
+  final void Function(_BarBucket bucket, _BarSegmentType segment) onBucketTap;
 
   const _SpendingBarChart({
     required this.viewMode,
     required this.currentDate,
     required this.expenses,
     required this.categories,
+    required this.currencySymbol,
     required this.onBucketTap,
   });
 
@@ -543,6 +581,22 @@ class _SpendingBarChart extends StatelessWidget {
                       'Monthly trend'),
             style: Theme.of(context).textTheme.titleSmall,
           ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              _buildLegendDot(
+                context,
+                _expensesColor,
+                AppLocalizations.of(context)?.expensesSegment ?? 'Expenses',
+              ),
+              const SizedBox(width: 12),
+              _buildLegendDot(
+                context,
+                _savingsColor,
+                AppLocalizations.of(context)?.savingsSegment ?? 'Savings',
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: BarChart(
@@ -562,7 +616,12 @@ class _SpendingBarChart extends StatelessWidget {
                     if (spot == null) return;
                     final index = spot.touchedBarGroupIndex;
                     if (index < 0 || index >= buckets.length) return;
-                    onBucketTap(buckets[index]);
+                    final bucket = buckets[index];
+                    final segment = bucket.segmentForStackIndex(
+                      spot.touchedStackItemIndex,
+                    );
+                    if (segment == null) return;
+                    onBucketTap(bucket, segment);
                   },
                 ),
                 titlesData: FlTitlesData(
@@ -572,8 +631,24 @@ class _SpendingBarChart extends StatelessWidget {
                   rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  leftTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 52,
+                      interval: ((maxY == 0 ? 1 : maxY * 1.2) / 2).clamp(
+                        1,
+                        double.infinity,
+                      ),
+                      getTitlesWidget: (value, meta) {
+                        return SideTitleWidget(
+                          meta: meta,
+                          child: Text(
+                            _formatAxisCents(value, locale, currencySymbol),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -628,11 +703,8 @@ class _SpendingBarChart extends StatelessWidget {
     final bucketCount = viewMode == StatsViewMode.yearly
         ? 12
         : DateTime(currentDate.year, currentDate.month + 1, 0).day;
-    final bucketTotals = List<int>.filled(bucketCount, 0);
-    final bucketCategoryTotals = List.generate(
-      bucketCount,
-      (_) => <int, int>{},
-    );
+    final bucketExpenseTotals = List<int>.filled(bucketCount, 0);
+    final bucketSavingsTotals = List<int>.filled(bucketCount, 0);
 
     for (final expense in expenses) {
       final bucketIndex = switch (viewMode) {
@@ -647,26 +719,12 @@ class _SpendingBarChart extends StatelessWidget {
 
       if (bucketIndex < 0 || bucketIndex >= bucketCount) continue;
 
-      bucketTotals[bucketIndex] += expense.amountCents;
-      final byCategory = bucketCategoryTotals[bucketIndex];
-      byCategory[expense.categoryId] =
-          (byCategory[expense.categoryId] ?? 0) + expense.amountCents;
-    }
-
-    List<BarChartRodStackItem> buildStackItems(Map<int, int> byCategory) {
-      final sorted = byCategory.entries.toList()
-        ..sort((a, b) => b.value.abs().compareTo(a.value.abs()));
-
-      var from = 0.0;
-      final stacks = <BarChartRodStackItem>[];
-      for (final entry in sorted) {
-        final amount = entry.value.abs().toDouble();
-        final to = from + amount;
-        final color = Color(categoryMap[entry.key]?.colorValue ?? 0xFF9E9E9E);
-        stacks.add(BarChartRodStackItem(from, to, color));
-        from = to;
+      final category = categoryMap[expense.categoryId];
+      if (category?.isSavings == true) {
+        bucketSavingsTotals[bucketIndex] += expense.amountCents;
+      } else {
+        bucketExpenseTotals[bucketIndex] += expense.amountCents;
       }
-      return stacks;
     }
 
     if (viewMode == StatsViewMode.yearly) {
@@ -676,12 +734,18 @@ class _SpendingBarChart extends StatelessWidget {
             final index = month - 1;
             final start = DateTime(currentDate.year, month, 1);
             final end = DateTime(currentDate.year, month + 1, 0, 23, 59, 59);
+            final stack = _buildStackItems(
+              bucketExpenseTotals[index],
+              bucketSavingsTotals[index],
+            );
             return _BarBucket(
               start: start,
               end: end,
-              totalCents: bucketTotals[index],
+              expensesCents: bucketExpenseTotals[index],
+              savingsCents: bucketSavingsTotals[index],
               label: DateFormat.MMM(locale).format(start),
-              stackItems: buildStackItems(bucketCategoryTotals[index]),
+              stackItems: stack.items,
+              segmentOrder: stack.segmentOrder,
             );
           })(),
       ];
@@ -700,14 +764,64 @@ class _SpendingBarChart extends StatelessWidget {
             59,
             59,
           );
+          final stack = _buildStackItems(
+            bucketExpenseTotals[index],
+            bucketSavingsTotals[index],
+          );
           return _BarBucket(
             start: start,
             end: end,
-            totalCents: bucketTotals[index],
+            expensesCents: bucketExpenseTotals[index],
+            savingsCents: bucketSavingsTotals[index],
             label: '$day',
-            stackItems: buildStackItems(bucketCategoryTotals[index]),
+            stackItems: stack.items,
+            segmentOrder: stack.segmentOrder,
           );
         })(),
     ];
+  }
+
+  _BucketStackData _buildStackItems(int expensesCents, int savingsCents) {
+    final stackItems = <BarChartRodStackItem>[];
+    final segmentOrder = <_BarSegmentType>[];
+
+    var from = 0.0;
+    if (expensesCents > 0) {
+      final to = from + expensesCents.toDouble();
+      stackItems.add(BarChartRodStackItem(from, to, _expensesColor));
+      segmentOrder.add(_BarSegmentType.expenses);
+      from = to;
+    }
+    if (savingsCents > 0) {
+      final to = from + savingsCents.toDouble();
+      stackItems.add(BarChartRodStackItem(from, to, _savingsColor));
+      segmentOrder.add(_BarSegmentType.savings);
+    }
+
+    return _BucketStackData(items: stackItems, segmentOrder: segmentOrder);
+  }
+
+  Widget _buildLegendDot(BuildContext context, Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
+      ],
+    );
+  }
+
+  String _formatAxisCents(double cents, String locale, String symbol) {
+    final formatter = NumberFormat.compactCurrency(
+      locale: locale,
+      symbol: symbol,
+      decimalDigits: 0,
+    );
+    return formatter.format(cents / 100);
   }
 }

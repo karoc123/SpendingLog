@@ -16,6 +16,7 @@ void main() {
     makeCategory(id: 1, name: 'Lebensmittel'),
     makeCategory(id: 2, name: 'Kaffee', parentId: 1),
     makeCategory(id: 3, name: 'Freizeit'),
+    makeCategory(id: 4, name: 'Sparen', isSavings: true),
   ];
 
   final testExpenses = <ExpenseEntity>[
@@ -33,6 +34,13 @@ void main() {
       amountCents: 20000,
       date: DateTime(2026, 5, 3),
       recurringExpenseId: 'rule-1',
+    ),
+    makeExpense(
+      id: 'e3',
+      description: 'ETF Transfer',
+      categoryId: 4,
+      amountCents: 15000,
+      date: DateTime(2026, 5, 8),
     ),
   ];
 
@@ -74,4 +82,20 @@ void main() {
       expect(find.byIcon(Icons.repeat), findsOneWidget);
     },
   );
+
+  testWidgets('TransactionsScreen applies initial savings segment filter', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        const TransactionsScreen(initialSegment: 'savings'),
+        overrides: buildOverrides(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('ETF Transfer'), findsOneWidget);
+    expect(find.text('Latte'), findsNothing);
+    expect(find.text('Miete'), findsNothing);
+  });
 }

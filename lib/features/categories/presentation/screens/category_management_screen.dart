@@ -259,6 +259,7 @@ class CategoryManagementScreen extends ConsumerWidget {
     final nameCtrl = TextEditingController(text: existing?.name ?? '');
     String selectedIcon = existing?.iconName ?? 'category';
     int selectedColor = existing?.colorValue ?? 0xFF4CAF50;
+    bool selectedIsSavings = existing?.isSavings ?? false;
     final l10n = AppLocalizations.of(context);
 
     showModalBottomSheet(
@@ -390,6 +391,22 @@ class CategoryManagementScreen extends ConsumerWidget {
                           );
                         }).toList(),
                       ),
+                      const SizedBox(height: 12),
+
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          l10n?.isSavingsCategory ?? 'Savings category',
+                        ),
+                        subtitle: Text(
+                          l10n?.isSavingsCategoryDescription ??
+                              'Count this category as savings in statistics.',
+                        ),
+                        value: selectedIsSavings,
+                        onChanged: (value) {
+                          setSheetState(() => selectedIsSavings = value);
+                        },
+                      ),
                       const SizedBox(height: 16),
 
                       SizedBox(
@@ -407,6 +424,7 @@ class CategoryManagementScreen extends ConsumerWidget {
                                       name: name,
                                       iconName: selectedIcon,
                                       colorValue: selectedColor,
+                                      isSavings: selectedIsSavings,
                                     ),
                                   );
                             } else {
@@ -419,6 +437,7 @@ class CategoryManagementScreen extends ConsumerWidget {
                                       parentId: parentId ?? existing?.parentId,
                                       iconName: selectedIcon,
                                       colorValue: selectedColor,
+                                      isSavings: selectedIsSavings,
                                       createdAt: DateTime.now(),
                                     ),
                                   );

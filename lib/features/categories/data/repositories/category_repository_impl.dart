@@ -15,6 +15,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
     parentId: row.parentId,
     iconName: row.iconName,
     colorValue: row.colorValue,
+    isSavings: row.isSavings,
     sortOrder: row.sortOrder,
     createdAt: row.createdAt,
   );
@@ -25,6 +26,7 @@ class CategoryRepositoryImpl implements CategoryRepository {
     parentId: Value(c.parentId),
     iconName: Value(c.iconName),
     colorValue: Value(c.colorValue),
+    isSavings: Value(c.isSavings),
     sortOrder: Value(c.sortOrder),
     createdAt: Value(c.createdAt),
   );

@@ -13,11 +13,28 @@ import '../../../statistics/presentation/providers/statistics_providers.dart';
 import '../../domain/entities/expense_entity.dart';
 import '../providers/expense_providers.dart';
 
+enum _SavingsSegmentFilter {
+  expenses,
+  savings;
+
+  static _SavingsSegmentFilter? fromQuery(String? value) {
+    switch (value?.trim().toLowerCase()) {
+      case 'expenses':
+        return _SavingsSegmentFilter.expenses;
+      case 'savings':
+        return _SavingsSegmentFilter.savings;
+      default:
+        return null;
+    }
+  }
+}
+
 class TransactionsScreen extends ConsumerStatefulWidget {
   final int? initialCategoryId;
   final DateTime? initialStart;
   final DateTime? initialEnd;
   final String? initialSearchQuery;
+  final String? initialSegment;
 
   const TransactionsScreen({
     super.key,
@@ -25,6 +42,7 @@ class TransactionsScreen extends ConsumerStatefulWidget {
     this.initialStart,
     this.initialEnd,
     this.initialSearchQuery,
+    this.initialSegment,
   });
 
   @override
@@ -36,11 +54,13 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
   String _searchQuery = '';
   int? _selectedCategoryId;
   DateTimeRange? _dateRange;
+  _SavingsSegmentFilter? _segmentFilter;
 
   @override
   void initState() {
     super.initState();
     _selectedCategoryId = widget.initialCategoryId;
+    _segmentFilter = _SavingsSegmentFilter.fromQuery(widget.initialSegment);
     if (widget.initialStart != null && widget.initialEnd != null) {
       _dateRange = DateTimeRange(
         start: widget.initialStart!,
@@ -195,6 +215,12 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
                     tooltip: l10n?.clearFilter ?? 'Filter zurücksetzen',
                     onPressed: () => setState(() => _dateRange = null),
                   ),
+                if (_segmentFilter != null)
+                  IconButton(
+                    icon: const Icon(Icons.filter_alt_off),
+                    tooltip: l10n?.clearFilter ?? 'Filter zurücksetzen',
+                    onPressed: () => setState(() => _segmentFilter = null),
+                  ),
               ],
             ),
           ),
@@ -204,6 +230,19 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
               child: Text(
                 '${dateFormat.format(_dateRange!.start)} – ${dateFormat.format(_dateRange!.end)}',
                 style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          if (_segmentFilter != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _segmentFilter == _SavingsSegmentFilter.savings
+                      ? (l10n?.savingsSegment ?? 'Savings')
+                      : (l10n?.expensesSegment ?? 'Expenses'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ),
           const Divider(),
@@ -405,6 +444,22 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
       result = result
           .where((e) => !e.date.isBefore(start) && !e.date.isAfter(end))
           .toList();
+    }
+
+    if (_segmentFilter != null) {
+      final savingsCategoryIds = categoryMap.values
+          .where((category) => category.isSavings)
+          .map((category) => category.id)
+          .toSet();
+
+      result = result.where((expense) {
+        final isSavingsExpense = savingsCategoryIds.contains(
+          expense.categoryId,
+        );
+        return _segmentFilter == _SavingsSegmentFilter.savings
+            ? isSavingsExpense
+            : !isSavingsExpense;
+      }).toList();
     }
 
     return result;

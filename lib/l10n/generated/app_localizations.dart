@@ -470,6 +470,36 @@ abstract class AppLocalizations {
   /// **'Vollständige Sicherung aller Daten (Ausgaben, Kategorien, wiederkehrende Ausgaben, Einstellungen).'**
   String get jsonExportDescription;
 
+  /// No description provided for @jsonImport.
+  ///
+  /// In de, this message translates to:
+  /// **'JSON-Backup importieren'**
+  String get jsonImport;
+
+  /// No description provided for @jsonImportDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Stellt alle Daten aus einer JSON-Backup-Datei wieder her. Bestehende Daten werden ersetzt.'**
+  String get jsonImportDescription;
+
+  /// No description provided for @jsonImportConfirmTitle.
+  ///
+  /// In de, this message translates to:
+  /// **'Backup wiederherstellen?'**
+  String get jsonImportConfirmTitle;
+
+  /// No description provided for @jsonImportConfirmMessage.
+  ///
+  /// In de, this message translates to:
+  /// **'Aktuelle Daten werden vollständig durch das ausgewählte Backup ersetzt.'**
+  String get jsonImportConfirmMessage;
+
+  /// No description provided for @jsonImportResult.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederherstellung abgeschlossen'**
+  String get jsonImportResult;
+
   /// No description provided for @csvImport.
   ///
   /// In de, this message translates to:
@@ -590,6 +620,18 @@ abstract class AppLocalizations {
   /// **'Farbe'**
   String get color;
 
+  /// No description provided for @isSavingsCategory.
+  ///
+  /// In de, this message translates to:
+  /// **'Savings-Kategorie'**
+  String get isSavingsCategory;
+
+  /// No description provided for @isSavingsCategoryDescription.
+  ///
+  /// In de, this message translates to:
+  /// **'Diese Kategorie wird in der Statistik als Ersparnis gewertet.'**
+  String get isSavingsCategoryDescription;
+
   /// No description provided for @searchTransactions.
   ///
   /// In de, this message translates to:
@@ -691,6 +733,42 @@ abstract class AppLocalizations {
   /// In de, this message translates to:
   /// **'Kategorie'**
   String get category;
+
+  /// No description provided for @categoriesLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Kategorien'**
+  String get categoriesLabel;
+
+  /// No description provided for @expensesLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausgaben'**
+  String get expensesLabel;
+
+  /// No description provided for @expensesSegment.
+  ///
+  /// In de, this message translates to:
+  /// **'Ausgaben'**
+  String get expensesSegment;
+
+  /// No description provided for @savingsSegment.
+  ///
+  /// In de, this message translates to:
+  /// **'Sparen'**
+  String get savingsSegment;
+
+  /// No description provided for @recurringLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Wiederkehrend'**
+  String get recurringLabel;
+
+  /// No description provided for @settingsLabel.
+  ///
+  /// In de, this message translates to:
+  /// **'Einstellungen'**
+  String get settingsLabel;
 
   /// No description provided for @includeAmountLabel.
   ///

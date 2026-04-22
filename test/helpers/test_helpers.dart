@@ -51,6 +51,7 @@ CategoryEntity makeCategory({
   int? parentId,
   String iconName = 'category',
   int colorValue = 0xFF4CAF50,
+  bool isSavings = false,
   int sortOrder = 0,
 }) => CategoryEntity(
   id: id,
@@ -58,6 +59,7 @@ CategoryEntity makeCategory({
   parentId: parentId,
   iconName: iconName,
   colorValue: colorValue,
+  isSavings: isSavings,
   sortOrder: sortOrder,
   createdAt: DateTime(2026, 1, 1),
 );

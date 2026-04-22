@@ -70,6 +70,21 @@ class $CategoriesTable extends Categories
     requiredDuringInsert: false,
     defaultValue: const Constant(0xFF9E9E9E),
   );
+  static const VerificationMeta _isSavingsMeta = const VerificationMeta(
+    'isSavings',
+  );
+  @override
+  late final GeneratedColumn<bool> isSavings = GeneratedColumn<bool>(
+    'is_savings',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_savings" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _sortOrderMeta = const VerificationMeta(
     'sortOrder',
   );
@@ -101,6 +116,7 @@ class $CategoriesTable extends Categories
     parentId,
     iconName,
     colorValue,
+    isSavings,
     sortOrder,
     createdAt,
   ];
@@ -145,6 +161,12 @@ class $CategoriesTable extends Categories
         colorValue.isAcceptableOrUnknown(data['color_value']!, _colorValueMeta),
       );
     }
+    if (data.containsKey('is_savings')) {
+      context.handle(
+        _isSavingsMeta,
+        isSavings.isAcceptableOrUnknown(data['is_savings']!, _isSavingsMeta),
+      );
+    }
     if (data.containsKey('sort_order')) {
       context.handle(
         _sortOrderMeta,
@@ -186,6 +208,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.int,
         data['${effectivePrefix}color_value'],
       )!,
+      isSavings: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_savings'],
+      )!,
       sortOrder: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
@@ -209,6 +235,7 @@ class Category extends DataClass implements Insertable<Category> {
   final int? parentId;
   final String iconName;
   final int colorValue;
+  final bool isSavings;
   final int sortOrder;
   final DateTime createdAt;
   const Category({
@@ -217,6 +244,7 @@ class Category extends DataClass implements Insertable<Category> {
     this.parentId,
     required this.iconName,
     required this.colorValue,
+    required this.isSavings,
     required this.sortOrder,
     required this.createdAt,
   });
@@ -230,6 +258,7 @@ class Category extends DataClass implements Insertable<Category> {
     }
     map['icon_name'] = Variable<String>(iconName);
     map['color_value'] = Variable<int>(colorValue);
+    map['is_savings'] = Variable<bool>(isSavings);
     map['sort_order'] = Variable<int>(sortOrder);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -244,6 +273,7 @@ class Category extends DataClass implements Insertable<Category> {
           : Value(parentId),
       iconName: Value(iconName),
       colorValue: Value(colorValue),
+      isSavings: Value(isSavings),
       sortOrder: Value(sortOrder),
       createdAt: Value(createdAt),
     );
@@ -260,6 +290,7 @@ class Category extends DataClass implements Insertable<Category> {
       parentId: serializer.fromJson<int?>(json['parentId']),
       iconName: serializer.fromJson<String>(json['iconName']),
       colorValue: serializer.fromJson<int>(json['colorValue']),
+      isSavings: serializer.fromJson<bool>(json['isSavings']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -273,6 +304,7 @@ class Category extends DataClass implements Insertable<Category> {
       'parentId': serializer.toJson<int?>(parentId),
       'iconName': serializer.toJson<String>(iconName),
       'colorValue': serializer.toJson<int>(colorValue),
+      'isSavings': serializer.toJson<bool>(isSavings),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -284,6 +316,7 @@ class Category extends DataClass implements Insertable<Category> {
     Value<int?> parentId = const Value.absent(),
     String? iconName,
     int? colorValue,
+    bool? isSavings,
     int? sortOrder,
     DateTime? createdAt,
   }) => Category(
@@ -292,6 +325,7 @@ class Category extends DataClass implements Insertable<Category> {
     parentId: parentId.present ? parentId.value : this.parentId,
     iconName: iconName ?? this.iconName,
     colorValue: colorValue ?? this.colorValue,
+    isSavings: isSavings ?? this.isSavings,
     sortOrder: sortOrder ?? this.sortOrder,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -304,6 +338,7 @@ class Category extends DataClass implements Insertable<Category> {
       colorValue: data.colorValue.present
           ? data.colorValue.value
           : this.colorValue,
+      isSavings: data.isSavings.present ? data.isSavings.value : this.isSavings,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -317,6 +352,7 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('parentId: $parentId, ')
           ..write('iconName: $iconName, ')
           ..write('colorValue: $colorValue, ')
+          ..write('isSavings: $isSavings, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -330,6 +366,7 @@ class Category extends DataClass implements Insertable<Category> {
     parentId,
     iconName,
     colorValue,
+    isSavings,
     sortOrder,
     createdAt,
   );
@@ -342,6 +379,7 @@ class Category extends DataClass implements Insertable<Category> {
           other.parentId == this.parentId &&
           other.iconName == this.iconName &&
           other.colorValue == this.colorValue &&
+          other.isSavings == this.isSavings &&
           other.sortOrder == this.sortOrder &&
           other.createdAt == this.createdAt);
 }
@@ -352,6 +390,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int?> parentId;
   final Value<String> iconName;
   final Value<int> colorValue;
+  final Value<bool> isSavings;
   final Value<int> sortOrder;
   final Value<DateTime> createdAt;
   const CategoriesCompanion({
@@ -360,6 +399,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.parentId = const Value.absent(),
     this.iconName = const Value.absent(),
     this.colorValue = const Value.absent(),
+    this.isSavings = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -369,6 +409,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.parentId = const Value.absent(),
     this.iconName = const Value.absent(),
     this.colorValue = const Value.absent(),
+    this.isSavings = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
@@ -378,6 +419,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<int>? parentId,
     Expression<String>? iconName,
     Expression<int>? colorValue,
+    Expression<bool>? isSavings,
     Expression<int>? sortOrder,
     Expression<DateTime>? createdAt,
   }) {
@@ -387,6 +429,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (parentId != null) 'parent_id': parentId,
       if (iconName != null) 'icon_name': iconName,
       if (colorValue != null) 'color_value': colorValue,
+      if (isSavings != null) 'is_savings': isSavings,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -398,6 +441,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<int?>? parentId,
     Value<String>? iconName,
     Value<int>? colorValue,
+    Value<bool>? isSavings,
     Value<int>? sortOrder,
     Value<DateTime>? createdAt,
   }) {
@@ -407,6 +451,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       parentId: parentId ?? this.parentId,
       iconName: iconName ?? this.iconName,
       colorValue: colorValue ?? this.colorValue,
+      isSavings: isSavings ?? this.isSavings,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -430,6 +475,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (colorValue.present) {
       map['color_value'] = Variable<int>(colorValue.value);
     }
+    if (isSavings.present) {
+      map['is_savings'] = Variable<bool>(isSavings.value);
+    }
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
@@ -447,6 +495,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('parentId: $parentId, ')
           ..write('iconName: $iconName, ')
           ..write('colorValue: $colorValue, ')
+          ..write('isSavings: $isSavings, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -1945,6 +1994,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<int?> parentId,
       Value<String> iconName,
       Value<int> colorValue,
+      Value<bool> isSavings,
       Value<int> sortOrder,
       Value<DateTime> createdAt,
     });
@@ -1955,6 +2005,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<int?> parentId,
       Value<String> iconName,
       Value<int> colorValue,
+      Value<bool> isSavings,
       Value<int> sortOrder,
       Value<DateTime> createdAt,
     });
@@ -2038,6 +2089,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<int> get colorValue => $composableBuilder(
     column: $table.colorValue,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSavings => $composableBuilder(
+    column: $table.isSavings,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2136,6 +2192,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isSavings => $composableBuilder(
+    column: $table.isSavings,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
     builder: (column) => ColumnOrderings(column),
@@ -2172,6 +2233,9 @@ class $$CategoriesTableAnnotationComposer
     column: $table.colorValue,
     builder: (column) => column,
   );
+
+  GeneratedColumn<bool> get isSavings =>
+      $composableBuilder(column: $table.isSavings, builder: (column) => column);
 
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
@@ -2267,6 +2331,7 @@ class $$CategoriesTableTableManager
                 Value<int?> parentId = const Value.absent(),
                 Value<String> iconName = const Value.absent(),
                 Value<int> colorValue = const Value.absent(),
+                Value<bool> isSavings = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CategoriesCompanion(
@@ -2275,6 +2340,7 @@ class $$CategoriesTableTableManager
                 parentId: parentId,
                 iconName: iconName,
                 colorValue: colorValue,
+                isSavings: isSavings,
                 sortOrder: sortOrder,
                 createdAt: createdAt,
               ),
@@ -2285,6 +2351,7 @@ class $$CategoriesTableTableManager
                 Value<int?> parentId = const Value.absent(),
                 Value<String> iconName = const Value.absent(),
                 Value<int> colorValue = const Value.absent(),
+                Value<bool> isSavings = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CategoriesCompanion.insert(
@@ -2293,6 +2360,7 @@ class $$CategoriesTableTableManager
                 parentId: parentId,
                 iconName: iconName,
                 colorValue: colorValue,
+                isSavings: isSavings,
                 sortOrder: sortOrder,
                 createdAt: createdAt,
               ),

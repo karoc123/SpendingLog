@@ -196,6 +196,23 @@ class AppLocalizationsEn extends AppLocalizations {
       'Full backup of all data (expenses, categories, recurring expenses, settings).';
 
   @override
+  String get jsonImport => 'Import JSON Backup';
+
+  @override
+  String get jsonImportDescription =>
+      'Restore all data from a JSON backup file. Existing data will be replaced.';
+
+  @override
+  String get jsonImportConfirmTitle => 'Restore backup?';
+
+  @override
+  String get jsonImportConfirmMessage =>
+      'Current data will be fully replaced by the selected backup.';
+
+  @override
+  String get jsonImportResult => 'Restore completed';
+
+  @override
   String get csvImport => 'CSV Import';
 
   @override
@@ -257,6 +274,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get color => 'Color';
 
   @override
+  String get isSavingsCategory => 'Savings category';
+
+  @override
+  String get isSavingsCategoryDescription =>
+      'Count this category as savings in statistics.';
+
+  @override
   String get searchTransactions => 'Search…';
 
   @override
@@ -308,6 +332,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get category => 'Category';
+
+  @override
+  String get categoriesLabel => 'categories';
+
+  @override
+  String get expensesLabel => 'expenses';
+
+  @override
+  String get expensesSegment => 'Expenses';
+
+  @override
+  String get savingsSegment => 'Savings';
+
+  @override
+  String get recurringLabel => 'recurring';
+
+  @override
+  String get settingsLabel => 'settings';
 
   @override
   String get includeAmountLabel => 'incl. amount';

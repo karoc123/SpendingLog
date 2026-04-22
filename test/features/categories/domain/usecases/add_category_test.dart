@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:spending_log/features/categories/domain/entities/category_entity.dart';
 import 'package:spending_log/features/categories/domain/usecases/add_category.dart';
 
 import '../../../../helpers/test_helpers.dart';
@@ -28,5 +29,18 @@ void main() {
 
     expect(result, 42);
     verify(() => mockRepository.addCategory(category)).called(1);
+  });
+
+  test('should pass savings category flag through unchanged', () async {
+    final category = makeCategory(isSavings: true);
+    when(() => mockRepository.addCategory(any())).thenAnswer((_) async => 7);
+
+    final result = await useCase(category);
+
+    expect(result, 7);
+    final captured =
+        verify(() => mockRepository.addCategory(captureAny())).captured.single
+            as CategoryEntity;
+    expect(captured.isSavings, isTrue);
   });
 }

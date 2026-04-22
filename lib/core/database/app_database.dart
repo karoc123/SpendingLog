@@ -19,6 +19,7 @@ class Categories extends Table {
   TextColumn get iconName => text().withDefault(const Constant('category'))();
   IntColumn get colorValue =>
       integer().withDefault(const Constant(0xFF9E9E9E))();
+  BoolColumn get isSavings => boolean().withDefault(const Constant(false))();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -78,7 +79,7 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.memory() => AppDatabase(connectInMemory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   // Migration strategy — seed default categories on first run.
   @override
@@ -90,6 +91,11 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
         await m.addColumn(recurringExpenses, recurringExpenses.endDate);
+      }
+      if (from < 3) {
+        await customStatement(
+          'ALTER TABLE categories ADD COLUMN is_savings INTEGER NOT NULL DEFAULT 0',
+        );
       }
     },
   );

@@ -37,6 +37,7 @@ final appRouter = GoRouter(
                 final end = state.uri.queryParameters['end'];
                 final categoryId = state.uri.queryParameters['categoryId'];
                 final search = state.uri.queryParameters['search'];
+                final segment = state.uri.queryParameters['segment'];
 
                 return TransactionsScreen(
                   initialStart: start != null ? DateTime.tryParse(start) : null,
@@ -45,6 +46,7 @@ final appRouter = GoRouter(
                       ? int.tryParse(categoryId)
                       : null,
                   initialSearchQuery: search,
+                  initialSegment: segment,
                 );
               },
             ),

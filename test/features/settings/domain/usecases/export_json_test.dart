@@ -49,6 +49,32 @@ void main() {
     expect(parsed['expenses'], isList);
     expect(parsed['recurring_expenses'], isList);
     expect(parsed['settings'], isA<Map>());
+
+    final categoryJson = (parsed['categories'] as List).first as Map;
+    final recurringJson = (parsed['recurring_expenses'] as List).first as Map;
+    expect(categoryJson, containsPair('is_savings', false));
+    expect(recurringJson, contains('end_date'));
+  });
+
+  test('should export savings category flag as true when set', () async {
+    when(
+      () => mockExpenseRepository.getAllExpenses(),
+    ).thenAnswer((_) async => []);
+    when(
+      () => mockCategoryRepository.getAllCategories(),
+    ).thenAnswer((_) async => [makeCategory(isSavings: true)]);
+    when(
+      () => mockRecurringRepository.getAllRecurringExpenses(),
+    ).thenAnswer((_) async => []);
+    when(
+      () => mockSettingsRepository.getAllSettings(),
+    ).thenAnswer((_) async => {});
+
+    final result = await useCase();
+    final parsed = jsonDecode(result) as Map<String, dynamic>;
+    final categoryJson = (parsed['categories'] as List).first as Map;
+
+    expect(categoryJson['is_savings'], isTrue);
   });
 
   test('should include expense fields in JSON output', () async {

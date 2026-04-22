@@ -19,7 +19,7 @@ void main() {
           releaseTag: 'v1.2.3',
           packageVersion: '1.2.3',
           buildNumber: '42',
-          displayVersion: 'v1.2.3+42',
+          displayVersion: 'v1.2.3',
         ),
       ),
     ];
