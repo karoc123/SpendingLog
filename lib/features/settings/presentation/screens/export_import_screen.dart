@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -226,25 +225,15 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
     if (!mounted) return;
     await _runWithLoading(() async {
       try {
-        final result = await FilePicker.pickFiles(
+        final files = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['csv'],
         );
-        if (result == null || result.files.isEmpty) {
+        if (files.isEmpty) {
           return;
         }
 
-        String csvContent;
-        if (kIsWeb) {
-          final bytes = result.files.first.bytes;
-          if (bytes == null) {
-            return;
-          }
-          csvContent = String.fromCharCodes(bytes);
-        } else {
-          final file = File(result.files.first.path!);
-          csvContent = await file.readAsString();
-        }
+        final csvContent = await files.first.xFile.readAsString();
 
         final count = importType == 'dkb'
             ? await ref.read(importCsvDkbProvider).call(csvContent)
@@ -290,29 +279,15 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
 
     await _runWithLoading(() async {
       try {
-        final result = await FilePicker.pickFiles(
+        final files = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: ['json'],
         );
-        if (result == null || result.files.isEmpty) {
+        if (files.isEmpty) {
           return;
         }
 
-        String jsonContent;
-        if (kIsWeb) {
-          final bytes = result.files.first.bytes;
-          if (bytes == null) {
-            return;
-          }
-          jsonContent = utf8.decode(bytes);
-        } else {
-          final path = result.files.first.path;
-          if (path == null) {
-            return;
-          }
-          final file = File(path);
-          jsonContent = await file.readAsString();
-        }
+        final jsonContent = await files.first.xFile.readAsString();
 
         final restore = await ref.read(importJsonProvider).call(jsonContent);
         if (!mounted) return;
@@ -345,12 +320,22 @@ class _ExportImportScreenState extends ConsumerState<ExportImportScreen> {
 
   Future<void> _shareText(String content, String fileName) async {
     if (kIsWeb) {
-      await Share.share(content, subject: fileName);
+      await SharePlus.instance.share(
+        ShareParams(
+          text: content,
+          subject: fileName,
+        ),
+      );
     } else {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$fileName');
       await file.writeAsString(content);
-      await Share.shareXFiles([XFile(file.path)], subject: fileName);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: fileName,
+        ),
+      );
     }
   }
 

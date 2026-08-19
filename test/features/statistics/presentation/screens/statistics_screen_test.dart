@@ -97,6 +97,7 @@ void main() {
   testWidgets('StatisticsScreen shows expenses and savings bar legend', (
     tester,
   ) async {
+    final now = DateTime.now();
     await tester.pumpWidget(
       buildTestApp(
         const StatisticsScreen(),
@@ -104,8 +105,8 @@ void main() {
           ...buildOverrides(),
           filteredStatsExpensesProvider.overrideWith((ref, filter) async {
             return [
-              makeExpense(id: 'bar-1', amountCents: 3000, categoryId: 1),
-              makeExpense(id: 'bar-2', amountCents: 1500, categoryId: 2),
+              makeExpense(id: 'bar-1', amountCents: 3000, categoryId: 1, date: now),
+              makeExpense(id: 'bar-2', amountCents: 1500, categoryId: 2, date: now),
             ];
           }),
         ],

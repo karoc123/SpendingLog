@@ -2018,7 +2018,7 @@ final class $$CategoriesTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.expenses,
-    aliasName: $_aliasNameGenerator(db.categories.id, db.expenses.categoryId),
+    aliasName: 'categories__id__expenses__category_id',
   );
 
   $$ExpensesTableProcessedTableManager get expensesRefs {
@@ -2037,10 +2037,7 @@ final class $$CategoriesTableReferences
   _recurringExpensesRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.recurringExpenses,
-        aliasName: $_aliasNameGenerator(
-          db.categories.id,
-          db.recurringExpenses.categoryId,
-        ),
+        aliasName: 'categories__id__recurring_expenses__category_id',
       );
 
   $$RecurringExpensesTableProcessedTableManager get recurringExpensesRefs {
@@ -2479,9 +2476,7 @@ final class $$ExpensesTableReferences
   $$ExpensesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias(
-        $_aliasNameGenerator(db.expenses.categoryId, db.categories.id),
-      );
+      db.categories.createAlias('expenses__category_id__categories__id');
 
   $$CategoriesTableProcessedTableManager get categoryId {
     final $_column = $_itemColumn<int>('category_id')!;
@@ -2892,10 +2887,8 @@ final class $$RecurringExpensesTableReferences
     super.$_typedResult,
   );
 
-  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias(
-        $_aliasNameGenerator(db.recurringExpenses.categoryId, db.categories.id),
-      );
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) => db.categories
+      .createAlias('recurring_expenses__category_id__categories__id');
 
   $$CategoriesTableProcessedTableManager get categoryId {
     final $_column = $_itemColumn<int>('category_id')!;
